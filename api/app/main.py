@@ -7,6 +7,9 @@ from app.api.routes.webhooks import router as webhooks_router
 from app.db.base import Base
 from app.db.session import engine
 from app.models import ticket, workflow_run
+from app.core.logging import configure_logging
+
+configure_logging()
 
 Base.metadata.create_all(bind=engine)
 
