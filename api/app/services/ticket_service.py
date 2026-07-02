@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from uuid import uuid4
+from app.services.rule_engine import rule_engine
 
 from app.schemas.ticket import (
     TicketCreate,
@@ -16,7 +17,7 @@ class TicketService:
             title=ticket.title,
             description=ticket.description,
             created_by=ticket.created_by,
-            priority=TicketPriority.MEDIUM,
+            priority=rule_engine.determine_priority(ticket),
             status=TicketStatus.NEW,
             source=ticket.source,
             created_at=datetime.now(UTC),
