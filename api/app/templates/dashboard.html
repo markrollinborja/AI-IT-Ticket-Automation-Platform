@@ -76,7 +76,7 @@
                             <th>Approval Required</th>
                             <th>Started At</th>
                             <th>Completed At</th>
-                            <th>Workflow ID</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -119,7 +119,10 @@
                             <td>{{ run.started_at }}</td>
                             <td>{{ run.completed_at or "-" }}</td>
                             <td>
-                                <code>{{ run.id }}</code>
+                                <a class="btn btn-sm btn-outline-primary"
+                                href="/dashboard/workflow-runs/{{ run.id }}">
+                                    View Details
+                                </a>
                             </td>
                         </tr>
                         {% else %}
