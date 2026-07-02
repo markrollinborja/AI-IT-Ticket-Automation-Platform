@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from app.services.jira_service import jira_service
 
 from app.db.session import get_db
 from app.schemas.jira import JiraWebhookEvent
@@ -20,3 +21,5 @@ def handle_jira_webhook(
         db=db,
         event=event,
     )
+
+from app.services.jira_service import jira_service

@@ -7,9 +7,14 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str
 
+    jira_base_url: str
+    jira_email: str
+    jira_api_token: str
+    jira_project_key: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_file_encoding="utf-8"
+        env_file_encoding="utf-8",
     )
 
 
