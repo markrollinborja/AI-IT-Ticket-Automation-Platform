@@ -6,7 +6,9 @@ from app.api.routes.tickets import router as tickets_router
 from app.api.routes.webhooks import router as webhooks_router
 from app.db.base import Base
 from app.db.session import engine
-from app.models import ticket, workflow_run
+from app.models.ticket import Ticket
+from app.models.workflow_run import WorkflowRun
+from app.models.audit_log import AuditLog
 from app.core.logging import configure_logging
 
 configure_logging()
