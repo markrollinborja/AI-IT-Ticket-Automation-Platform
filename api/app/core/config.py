@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     jira_api_token: str
     jira_project_key: str
 
+    slack_webhook_url: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

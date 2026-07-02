@@ -7,6 +7,7 @@ from app.schemas.ticket import TicketCreate, TicketResponse, TicketSource
 from app.services.approval_policy_service import approval_policy_service
 from app.services.audit_log_service import audit_log_service
 from app.services.jira_service import jira_service
+from app.services.slack_notification_service import slack_notification_service
 from app.services.ticket_persistence_service import ticket_persistence_service
 from app.services.ticket_service import ticket_service
 from app.services.workflow_run_service import workflow_run_service
@@ -57,6 +58,16 @@ class WorkflowService:
                 workflow_run_id=workflow_run.id,
                 event="approval_required",
                 message=approval_result.reason or "Human approval required.",
+            )
+
+            slack_notification_service.send_message(
+                f"""
+:warning: Approval Required
+
+Issue: {persisted_ticket.jira_issue_key}
+Reporter: {persisted_ticket.reporter}
+Reason: {approval_result.reason}
+"""
             )
 
             logger.info(
@@ -116,6 +127,17 @@ class WorkflowService:
                 message=f"Workflow completed for Jira issue {persisted_ticket.jira_issue_key}.",
             )
 
+            slack_notification_service.send_message(
+                f"""
+:white_check_mark: Workflow Completed
+
+Issue: {persisted_ticket.jira_issue_key}
+Priority: {processed_ticket.priority.value}
+Status: Completed
+Classification: Rule Engine
+"""
+            )
+
             logger.info("Workflow completed for Jira issue %s", persisted_ticket.jira_issue_key)
 
             return processed_ticket
@@ -135,6 +157,16 @@ class WorkflowService:
                 workflow_run_id=workflow_run.id,
                 event="workflow_failed",
                 message=f"Workflow failed: {type(error).__name__}: {str(error)}",
+            )
+
+            slack_notification_service.send_message(
+                f"""
+:x: Workflow Failed
+
+Issue: {persisted_ticket.jira_issue_key}
+Error: {type(error).__name__}
+Message: {str(error)}
+"""
             )
 
             raise
