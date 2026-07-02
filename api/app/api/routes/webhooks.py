@@ -9,7 +9,7 @@ from app.services.workflow_service import workflow_service
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
 
-@router.post("/jira", response_model=TicketResponse)
+@router.post("/jira")
 def handle_jira_webhook(
     event: JiraWebhookEvent,
     db: Session = Depends(get_db),

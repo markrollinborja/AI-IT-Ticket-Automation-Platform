@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.schemas.jira import JiraWebhookEvent
 from app.schemas.ticket import TicketCreate, TicketResponse, TicketSource
+from app.services.approval_policy_service import approval_policy_service
 from app.services.audit_log_service import audit_log_service
 from app.services.jira_service import jira_service
 from app.services.ticket_persistence_service import ticket_persistence_service
@@ -18,7 +19,7 @@ class WorkflowService:
         self,
         db: Session,
         event: JiraWebhookEvent,
-    ) -> TicketResponse:
+    ) -> TicketResponse | dict:
         logger.info("Workflow started for Jira issue %s", event.issue.key)
 
         persisted_ticket = ticket_persistence_service.get_or_create_from_jira_event(
@@ -39,6 +40,36 @@ class WorkflowService:
             event="workflow_started",
             message=f"Workflow started for Jira issue {persisted_ticket.jira_issue_key}.",
         )
+
+        approval_result = approval_policy_service.evaluate(
+            reporter=persisted_ticket.reporter,
+        )
+
+        if approval_result.approval_required:
+            workflow_run_service.mark_pending_approval(
+                db=db,
+                workflow_run=workflow_run,
+                approval_reason=approval_result.reason or "Human approval required.",
+            )
+
+            audit_log_service.record_event(
+                db=db,
+                workflow_run_id=workflow_run.id,
+                event="approval_required",
+                message=approval_result.reason or "Human approval required.",
+            )
+
+            logger.info(
+                "Workflow pending approval for Jira issue %s",
+                persisted_ticket.jira_issue_key,
+            )
+
+            return {
+                "status": "pending_approval",
+                "jira_issue_key": persisted_ticket.jira_issue_key,
+                "approval_required": True,
+                "approval_reason": approval_result.reason,
+            }
 
         try:
             ticket = TicketCreate(

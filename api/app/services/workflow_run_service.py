@@ -24,6 +24,21 @@ class WorkflowRunService:
 
         return workflow_run
 
+    def mark_pending_approval(
+        self,
+        db: Session,
+        workflow_run: WorkflowRun,
+        approval_reason: str,
+    ) -> WorkflowRun:
+        workflow_run.status = "pending_approval"
+        workflow_run.approval_required = True
+        workflow_run.approval_reason = approval_reason
+
+        db.commit()
+        db.refresh(workflow_run)
+
+        return workflow_run
+
     def mark_completed(
         self,
         db: Session,
