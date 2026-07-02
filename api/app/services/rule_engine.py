@@ -19,7 +19,9 @@ class RuleEngine:
     def evaluate_ticket(self, ticket: TicketCreate) -> RuleEngineResult:
         text = f"{ticket.title} {ticket.description}".lower()
 
-        if "production down" in text or "system down" in text or "outage" in text:
+        if self._contains_any(text, ["production", "prod", "system", "server", "website"]) and self._contains_any(
+            text, ["down", "outage", "unavailable", "not working", "offline"]
+        ):
             return RuleEngineResult(
                 matched=True,
                 priority=TicketPriority.CRITICAL,
@@ -27,15 +29,25 @@ class RuleEngine:
                 reason="Ticket matched production outage keywords.",
             )
 
-        if "cannot login" in text or "vpn" in text or "access denied" in text:
+        if self._contains_any(text, ["cannot login", "can't login", "unable to login", "locked out", "access denied"]):
             return RuleEngineResult(
                 matched=True,
                 priority=TicketPriority.HIGH,
-                rule_name="access_issue",
-                reason="Ticket matched access or VPN issue keywords.",
+                rule_name="login_or_access_issue",
+                reason="Ticket matched login or access issue keywords.",
             )
 
-        if "password reset" in text or "reset password" in text:
+        if self._contains_any(text, ["vpn", "remote access"]) and self._contains_any(
+            text, ["not working", "cannot connect", "can't connect", "down", "failed"]
+        ):
+            return RuleEngineResult(
+                matched=True,
+                priority=TicketPriority.HIGH,
+                rule_name="vpn_issue",
+                reason="Ticket matched VPN connectivity keywords.",
+            )
+
+        if self._contains_any(text, ["password reset", "reset password", "forgot password", "change password"]):
             return RuleEngineResult(
                 matched=True,
                 priority=TicketPriority.LOW,
@@ -49,6 +61,9 @@ class RuleEngine:
             rule_name=None,
             reason="No deterministic rule matched.",
         )
+
+    def _contains_any(self, text: str, keywords: list[str]) -> bool:
+        return any(keyword in text for keyword in keywords)
 
 
 rule_engine = RuleEngine()
