@@ -20,5 +20,3 @@ def handle_jira_webhook(
         db=db,
         event=event,
     )
-
-from app.services.jira_service import jira_service

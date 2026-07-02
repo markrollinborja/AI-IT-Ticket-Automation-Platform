@@ -1,15 +1,9 @@
-# Python
+.env
 __pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
-# Virtual Environment
+*.pyc
 .venv/
 venv/
-
-# Environment Variables
-.env
+.pytest_cache/
 
 # VS Code
 .vscode/
@@ -19,3 +13,18 @@ venv/
 
 # Windows
 Thumbs.db
+
+# Coverage
+.coverage
+htmlcov/
+
+# SQLAlchemy / SQLite (if ever used)
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# Environment files
+.env.*
+!.env.example
