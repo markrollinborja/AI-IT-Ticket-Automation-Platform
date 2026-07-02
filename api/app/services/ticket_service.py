@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 from app.services.rule_engine import rule_engine
+from app.services.ai_classification_service import ai_classification_service
 
 from app.schemas.ticket import (
     TicketCreate,
@@ -12,6 +13,7 @@ from app.schemas.ticket import (
 
 class TicketService:
     def create_ticket(self, ticket: TicketCreate) -> TicketResponse:
+        ai_result = ai_classification_service.classify_ticket(ticket)
         return TicketResponse(
             id=uuid4(),
             title=ticket.title,
