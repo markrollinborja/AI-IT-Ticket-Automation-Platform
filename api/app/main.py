@@ -10,6 +10,7 @@ from app.models.ticket import Ticket
 from app.models.workflow_run import WorkflowRun
 from app.models.audit_log import AuditLog
 from app.core.logging import configure_logging
+from app.api.routes.workflow_runs import router as workflow_runs_router
 
 configure_logging()
 
@@ -24,3 +25,4 @@ app = FastAPI(
 app.include_router(health_router)
 app.include_router(tickets_router)
 app.include_router(webhooks_router)
+app.include_router(workflow_runs_router)
