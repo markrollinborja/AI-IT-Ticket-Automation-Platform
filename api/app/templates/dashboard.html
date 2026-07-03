@@ -116,8 +116,8 @@
                                 {% endif %}
                             </td>
 
-                            <td>{{ run.started_at }}</td>
-                            <td>{{ run.completed_at or "-" }}</td>
+                            <td>{{ run.started_at|format_datetime }}</td>
+                            <td>{{ run.completed_at|format_datetime }}</td>
                             <td>
                                 <a class="btn btn-sm btn-outline-primary"
                                 href="/dashboard/workflow-runs/{{ run.id }}">

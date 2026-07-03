@@ -12,6 +12,24 @@ router = APIRouter(tags=["Dashboard"])
 
 templates = Jinja2Templates(directory="app/templates")
 
+def format_datetime(value):
+    if value is None:
+        return "-"
+
+    return value.strftime("%b %d, %Y %I:%M %p UTC")
+
+
+def format_duration(started_at, completed_at):
+    if started_at is None or completed_at is None:
+        return "-"
+
+    seconds = (completed_at - started_at).total_seconds()
+    return f"{seconds:.2f} sec"
+
+
+templates.env.filters["format_datetime"] = format_datetime
+templates.env.filters["format_duration"] = format_duration
+
 
 @router.get("/dashboard")
 def dashboard(
