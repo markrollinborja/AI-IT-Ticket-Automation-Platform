@@ -14,7 +14,6 @@ class ApprovalPolicyService:
         "CIO",
         "CTO",
         "Chief Executive Officer",
-        "Mark CEO",
     }
 
     def evaluate(self, reporter: str) -> ApprovalPolicyResult:
@@ -24,9 +23,7 @@ class ApprovalPolicyService:
                 reason="Executive user request requires human approval.",
             )
 
-        return ApprovalPolicyResult(
-            approval_required=False,
-        )
+        return ApprovalPolicyResult(approval_required=False)
 
 
 approval_policy_service = ApprovalPolicyService()
