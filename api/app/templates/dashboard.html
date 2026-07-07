@@ -73,6 +73,7 @@
                         <tr>
                             <th>Status</th>
                             <th>Priority</th>
+                            <th>Classification Source</th>
                             <th>Approval Required</th>
                             <th>Started At</th>
                             <th>Completed At</th>
@@ -109,6 +110,16 @@
                             </td>
 
                             <td>
+                                {% if run.final_category == "ai" %}
+                                    <span class="badge text-bg-info">AI</span>
+                                {% elif run.final_category == "rule_engine" %}
+                                    <span class="badge text-bg-secondary">Rule Engine</span>
+                                {% else %}
+                                    <span class="badge text-bg-light text-dark">{{ run.final_category or "-" }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
                                 {% if run.approval_required %}
                                     <span class="badge text-bg-warning">Yes</span>
                                 {% else %}
@@ -118,16 +129,17 @@
 
                             <td>{{ run.started_at|format_datetime }}</td>
                             <td>{{ run.completed_at|format_datetime }}</td>
+
                             <td>
                                 <a class="btn btn-sm btn-outline-primary"
-                                href="/dashboard/workflow-runs/{{ run.id }}">
+                                   href="/dashboard/workflow-runs/{{ run.id }}">
                                     View Details
                                 </a>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 No workflow runs found.
                             </td>
                         </tr>
