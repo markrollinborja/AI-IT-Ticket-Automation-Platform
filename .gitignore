@@ -1,9 +1,16 @@
+# Environment files
 .env
+.env.*
+!.env.example
+
+# Python
 __pycache__/
 *.pyc
+.pytest_cache/
+
+# Virtual environments
 .venv/
 venv/
-.pytest_cache/
 
 # VS Code
 .vscode/
@@ -18,13 +25,12 @@ Thumbs.db
 .coverage
 htmlcov/
 
-# SQLAlchemy / SQLite (if ever used)
+# SQLAlchemy / SQLite
 *.db
 *.sqlite3
 
 # Logs
 *.log
 
-# Environment files
-.env.*
-!.env.example
+# Local archives / backups
+*.zip
