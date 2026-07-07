@@ -25,6 +25,35 @@
 
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white">
+                <h5 class="mb-0">Ticket Information</h5>
+            </div>
+
+            <div class="card-body">
+                {% if workflow_run.ticket %}
+                    <div class="mb-3">
+                        <div class="text-muted small">Reporter</div>
+                        <div class="fw-bold">{{ workflow_run.ticket.reporter or "Unknown Reporter" }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="text-muted small">Title</div>
+                        <div class="fw-bold fs-5">{{ workflow_run.ticket.title }}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-muted small">Description</div>
+                        <div class="border rounded bg-light p-3">
+                            {{ workflow_run.ticket.description }}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-muted">Ticket information not available.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
                 <h5 class="mb-0">Run Summary</h5>
             </div>
 

@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
@@ -19,6 +19,8 @@ class WorkflowRun(Base):
         nullable=False,
         index=True,
     )
+
+    ticket = relationship("Ticket")
 
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="processing")
 

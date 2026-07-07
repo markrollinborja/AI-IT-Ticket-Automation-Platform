@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.db.session import get_db
 from app.models.audit_log import AuditLog
@@ -11,6 +11,7 @@ from app.models.workflow_run import WorkflowRun
 router = APIRouter(tags=["Dashboard"])
 
 templates = Jinja2Templates(directory="app/templates")
+
 
 def format_datetime(value):
     if value is None:
@@ -38,6 +39,7 @@ def dashboard(
 ):
     workflow_runs = (
         db.query(WorkflowRun)
+        .options(joinedload(WorkflowRun.ticket))
         .order_by(WorkflowRun.created_at.desc())
         .limit(25)
         .all()
@@ -60,6 +62,7 @@ def workflow_run_details(
 ):
     workflow_run = (
         db.query(WorkflowRun)
+        .options(joinedload(WorkflowRun.ticket))
         .filter(WorkflowRun.id == workflow_run_id)
         .first()
     )

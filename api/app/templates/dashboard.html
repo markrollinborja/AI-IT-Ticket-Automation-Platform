@@ -72,6 +72,7 @@
                     <thead class="table-dark">
                         <tr>
                             <th>Status</th>
+                            <th>Ticket</th>
                             <th>Priority</th>
                             <th>Classification Source</th>
                             <th>Approval Required</th>
@@ -92,6 +93,17 @@
                                     <span class="badge text-bg-warning">Pending Approval</span>
                                 {% else %}
                                     <span class="badge text-bg-secondary">{{ run.status }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if run.ticket %}
+                                    <div class="fw-semibold">{{ run.ticket.title }}</div>
+                                    <div class="text-muted small">
+                                        {{ run.ticket.reporter or "Unknown Reporter" }} • {{ run.ticket.jira_issue_key }}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Ticket not available</span>
                                 {% endif %}
                             </td>
 
@@ -139,7 +151,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 No workflow runs found.
                             </td>
                         </tr>
