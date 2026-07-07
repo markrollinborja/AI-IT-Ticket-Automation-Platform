@@ -2,157 +2,173 @@
 
 ## Overview
 
-The AI IT Ticket Automation Platform exposes REST APIs for enterprise integrations, workflow management, approvals, and dashboard operations.
+The AI IT Ticket Automation Platform exposes a small set of REST endpoints focused on workflow automation, Jira integration, and operational visibility.
 
-The API follows RESTful principles and uses JSON for request and response payloads.
-
----
-
-# API Base URL
-
-```
-/api/v1
-```
-
-Versioning allows future API enhancements without breaking existing integrations.
+The API is intentionally lightweight because Jira is the system of record. The platform primarily reacts to Jira webhook events rather than providing full ticket management.
 
 ---
 
-# Webhook Endpoints
+# API Principles
 
-## POST /api/v1/webhooks/jira
+The API is designed around the following principles:
 
-Receives ticket creation events from Jira.
+- Jira-first architecture
+- RESTful endpoint design
+- Stateless request handling
+- Separation of concerns
+- Service-oriented architecture
+- Clear responsibility for each endpoint
+
+---
+
+# API Endpoints
+
+## Health
+
+### GET /health
+
+Returns the application health status.
 
 **Purpose**
 
-Starts the ticket automation workflow.
+- Health checks
+- Docker verification
+- Deployment monitoring
 
 ---
 
-# Ticket Endpoints
+## Jira Webhooks
 
-## GET /api/v1/tickets
+### POST /webhooks/jira
 
-Returns all processed tickets.
+Receives webhook events from Jira Cloud.
 
----
+**Responsibilities**
 
-## GET /api/v1/tickets/{ticket_id}
-
-Returns detailed information for a single ticket.
-
----
-
-# Workflow Endpoints
-
-## GET /api/v1/workflows/{workflow_id}
-
-Returns workflow execution details.
+- Validate incoming webhook payload
+- Persist ticket data
+- Start workflow execution
+- Execute Rule Engine
+- Call OpenAI if required
+- Update Jira priority
+- Record workflow history
+- Send Slack notification
 
 ---
 
-## POST /api/v1/workflows/{workflow_id}/retry
+## Tickets
 
-Retries a failed workflow execution.
+### GET /tickets
 
----
-
-# Approval Endpoints
-
-## GET /api/v1/approvals
-
-Returns pending approval requests.
+Returns persisted tickets.
 
 ---
 
-## POST /api/v1/approvals/{approval_id}/approve
+### POST /tickets
 
-Approves a workflow.
+Creates a ticket manually for local development and testing.
 
----
-
-## POST /api/v1/approvals/{approval_id}/reject
-
-Rejects a workflow.
+This endpoint exists primarily for development purposes. In production, Jira is expected to create tickets.
 
 ---
 
-# Dashboard Endpoints
+## Workflow Runs
 
-## GET /api/v1/dashboard/metrics
+### GET /workflow-runs
 
-Returns dashboard summary metrics.
+Returns all workflow executions.
 
-Example:
+Information includes:
 
-- Tickets Processed
-- Pending Approvals
-- Failed Workflows
-- Average Processing Time
-
----
-
-## GET /api/v1/dashboard/recent-activity
-
-Returns recent workflow activity.
+- Workflow status
+- Final priority
+- Classification source
+- Started time
+- Completed time
 
 ---
 
-# Health Endpoint
+### GET /workflow-runs/{workflow_run_id}
 
-## GET /api/v1/health
+Returns detailed information for a single workflow execution.
 
-Returns application health status.
+Includes:
 
-This endpoint is intended for monitoring and deployment verification.
-
----
-
-# Authentication
-
-All API endpoints require authentication except:
-
-- GET /api/v1/health
-- POST /api/v1/webhooks/jira (validated using webhook secrets)
-
-Authentication details are defined in the Authentication Strategy document.
+- Workflow metadata
+- AI metadata
+- Timeline
+- Audit logs
+- Error information (if applicable)
 
 ---
 
-# Response Format
+## Dashboard
 
-Successful responses use a consistent JSON structure.
+### GET /dashboard
 
-```json
-{
-  "success": true,
-  "data": {}
-}
+Returns the workflow dashboard.
+
+Displays:
+
+- Total workflows
+- Completed workflows
+- Pending workflows
+- Failed workflows
+- Workflow execution history
+
+---
+
+# Request Flow
+
+```text
+Jira
+ │
+ ▼
+POST /webhooks/jira
+ │
+ ▼
+Workflow Service
+ │
+ ▼
+Rule Engine
+ │
+ ├── Rule Matched
+ │
+ └── OpenAI
+ │
+ ▼
+Update Jira
+ │
+ ▼
+Audit Log
+ │
+ ▼
+Slack
 ```
 
-Error responses use:
+---
 
-```json
-{
-  "success": false,
-  "error": {
-    "code": "WORKFLOW_FAILED",
-    "message": "Workflow execution failed."
-  }
-}
-```
+# Error Handling
+
+The API follows a fail-safe workflow.
+
+If an unexpected error occurs:
+
+- WorkflowRun is marked as Failed.
+- Failure details are persisted.
+- AuditLog records the failure.
+- Slack receives a failure notification.
+- The exception is logged for troubleshooting.
 
 ---
 
-# API Design Principles
+# Version 1 Scope
 
-The API follows these principles:
+Version 1 intentionally limits AI functionality to priority classification only.
 
-- RESTful resource naming
-- Versioned endpoints
-- Consistent response structure
-- JSON request and response bodies
-- Stateless request handling
-- Secure authentication
-- Clear separation between workflow operations and administrative functions
+Future API enhancements may include:
+
+- Category prediction
+- Support team recommendation
+- Suggested responses
+- Approval workflow endpoints

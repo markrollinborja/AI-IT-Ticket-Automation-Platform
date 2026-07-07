@@ -2,160 +2,155 @@
 
 ## Overview
 
-The AI IT Ticket Automation Platform uses a modular monolith architecture.
+The AI IT Ticket Automation Platform follows a **Jira-first, Rule Engine-first** architecture designed to mirror enterprise IT automation workflows.
 
-The system is designed as a single deployable backend application with clearly separated internal modules for Jira integration, workflow orchestration, AI analysis, business rules, approvals, notifications, audit logging, and dashboard APIs.
-
-This approach provides a production-quality architecture while avoiding unnecessary distributed system complexity for Version 1.
+Jira is the system of record for all tickets. The platform acts as an automation layer that receives Jira webhook events, classifies ticket priority, updates Jira, records workflow history, and notifies stakeholders.
 
 ---
 
-## Architecture Style
-
-**Architecture Pattern:** Modular Monolith
-
-The platform is deployed as one backend service, but the codebase is organized into independent modules with clear responsibilities.
-
-This allows the system to remain simple to deploy while still supporting maintainability, testability, and future expansion.
-
----
-
-## High-Level Architecture
+# High-Level Architecture
 
 ```text
-Employee
-   ↓
-Jira
-   ↓
-Jira Webhook
-   ↓
-FastAPI Backend
-   ↓
-PostgreSQL Audit Database
-   ↓
-React Admin Dashboard
+                        User
+                          │
+                          ▼
+                 Jira Ticket Created
+                          │
+                          ▼
+                   Jira Cloud Webhook
+                          │
+                          ▼
+                        FastAPI
+                          │
+                          ▼
+                  Workflow Service
+                          │
+                          ▼
+                 Persist Ticket
+                          │
+                          ▼
+                Create WorkflowRun
+                          │
+                          ▼
+              Approval Policy Check
+                          │
+                          ▼
+                    Rule Engine
+                  ┌────────┴────────┐
+                  │                 │
+          Rule Matched      No Rule Match
+                  │                 │
+                  │                 ▼
+                  │        OpenAI (GPT-4o-mini)
+                  │                 │
+                  └────────┬────────┘
+                           ▼
+                Update Jira Priority
+                           │
+                           ▼
+                  Record Audit Logs
+                           │
+                           ▼
+                Send Slack Notification
+                           │
+                           ▼
+                  Workflow Completed
 ```
 
 ---
 
-## Core Components
+# Workflow Components
 
-### React Admin Dashboard
+## Jira Cloud
 
-Provides administrators with visibility into ticket status, workflow execution, approval state, notification history, and system metrics.
-
-### FastAPI Backend
-
-Acts as the main application layer for receiving webhook events, executing workflows, exposing dashboard APIs, and coordinating internal modules.
-
-### PostgreSQL Database
-
-Stores ticket metadata, AI recommendations, business rule decisions, approval records, notification events, workflow execution history, and audit logs.
-
-### Jira Integration Module
-
-Receives Jira webhook events and retrieves ticket details when needed.
-
-### Webhook Module
-
-Validates incoming Jira webhook requests before workflow execution begins.
-
-### Workflow Orchestration Module
-
-Coordinates the end-to-end automation process for each ticket.
-
-### AI Analysis Module
-
-Uses the OpenAI API to classify tickets, recommend priority, recommend support team, identify missing information, and generate first response suggestions.
-
-### Business Rules Module
-
-Applies deterministic workflow rules after AI analysis to enforce NorthStar Retail policies.
-
-### Approval Module
-
-Creates and tracks approval requests when a workflow requires human review.
-
-### Notification Module
-
-Sends Slack and email notifications based on workflow events and business rule outcomes.
-
-### Audit Logging Module
-
-Records every workflow step, decision, error, and integration event for traceability.
-
-### Dashboard API Module
-
-Exposes backend endpoints used by the React Admin Dashboard.
+Receives IT support requests and serves as the source of truth for all tickets.
 
 ---
 
-## Request Flow
+## FastAPI
 
-```text
-1. Employee creates a ticket in Jira.
-2. Jira sends a webhook event to the FastAPI backend.
-3. The Webhook Module validates the request.
-4. The Jira Integration Module retrieves or normalizes ticket data.
-5. The Workflow Orchestration Module starts the ticket workflow.
-6. The AI Analysis Module analyzes the ticket.
-7. The Business Rules Module evaluates workflow decisions.
-8. The Approval Module creates an approval request if needed.
-9. The Notification Module sends Slack and email notifications.
-10. The Audit Logging Module records workflow events.
-11. The Dashboard API Module exposes workflow status to the React Admin Dashboard.
+Receives Jira webhook events and coordinates the workflow execution.
+
+---
+
+## Workflow Service
+
+Orchestrates the end-to-end ticket processing workflow, including persistence, classification, notifications, and workflow tracking.
+
+---
+
+## Rule Engine
+
+Attempts to classify ticket priority using deterministic business rules.
+
+This executes before AI to improve performance, reduce cost, and ensure predictable behavior.
+
+---
+
+## OpenAI Classification
+
+If no rule matches, GPT-4o-mini classifies the ticket priority and returns:
+
+```json
+{
+    "priority": "high",
+    "confidence_score": 0.95
+}
 ```
 
----
+Only the priority is used for workflow decisions.
 
-## Internal Module Design
-
-```text
-FastAPI Backend
-│
-├── Webhook Module
-├── Jira Integration Module
-├── Workflow Orchestration Module
-├── AI Analysis Module
-├── Business Rules Module
-├── Approval Module
-├── Notification Module
-├── Audit Logging Module
-└── Dashboard API Module
-```
+The confidence score is stored for auditing and visibility.
 
 ---
 
-## External Integrations
+## WorkflowRun
 
-| Integration | Purpose |
-|------------|---------|
-| Jira | Source of IT support tickets |
-| OpenAI API | AI-assisted ticket analysis |
-| Slack API | Team notifications |
-| Email Service | Stakeholder notifications |
-| PostgreSQL | Audit and workflow data storage |
+Tracks each workflow execution, including:
 
----
-
-## Architecture Principles
-
-The system follows these principles:
-
-- Keep Version 1 simple and deployable.
-- Use a modular monolith instead of premature microservices.
-- Separate AI recommendations from deterministic business rules.
-- Treat Jira as the ticket system of record.
-- Maintain complete audit history.
-- Keep humans in control of sensitive workflow decisions.
-- Design modules so future integrations can be added with minimal disruption.
+- Workflow status
+- Final priority
+- Classification source
+- AI metadata
+- Start time
+- Completion time
+- Failure information
 
 ---
 
-## Version 1 Architecture Decision
+## Audit Logs
 
-Version 1 will not use a microservice architecture.
+Records important workflow events such as:
 
-The platform does not require independently deployed services at this stage. A modular monolith provides enough separation of concerns while reducing operational overhead, deployment complexity, and development time.
+- Workflow started
+- Ticket classified
+- Jira priority updated
+- Workflow completed
+- Workflow failed
 
-If the system grows in future versions, modules such as AI Analysis, Notification, or Workflow Orchestration could be extracted into separate services.
+---
+
+## Slack
+
+Sends workflow notifications after successful or failed executions.
+
+---
+
+# Design Principles
+
+The architecture follows these principles:
+
+- Jira remains the source of truth.
+- Rule Engine executes before AI.
+- AI is used only when deterministic rules cannot classify a ticket.
+- Every workflow execution is traceable.
+- Every significant event is auditable.
+- External integrations remain loosely coupled through service classes.
+
+---
+
+# Version 1 Scope
+
+The architecture intentionally limits AI to **priority classification only**.
+
+Features such as category prediction, support team recommendation, approval workflows, and suggested responses are reserved for Version 2.
