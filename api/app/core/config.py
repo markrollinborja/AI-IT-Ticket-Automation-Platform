@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     app_name: str = "AI IT Ticket Automation Platform API"
     app_version: str = "0.1.0"
     environment: str = "development"
+
     database_url: str
 
     jira_base_url: str
@@ -13,6 +14,10 @@ class Settings(BaseSettings):
     jira_project_key: str
 
     slack_webhook_url: str
+
+    # OpenAI
+    openai_api_key: str
+    openai_model: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

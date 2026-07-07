@@ -45,11 +45,19 @@ class WorkflowRunService:
         workflow_run: WorkflowRun,
         final_priority: TicketPriority,
         classification_source: str,
+        ai_priority: TicketPriority | None = None,
+        ai_confidence_score: float | None = None,
     ) -> WorkflowRun:
         workflow_run.status = "completed"
         workflow_run.final_priority = final_priority.value
         workflow_run.final_category = classification_source
         workflow_run.completed_at = datetime.now(UTC)
+
+        if ai_priority is not None:
+            workflow_run.ai_priority = ai_priority.value
+
+        if ai_confidence_score is not None:
+            workflow_run.ai_confidence_score = ai_confidence_score
 
         db.commit()
         db.refresh(workflow_run)

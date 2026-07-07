@@ -38,3 +38,6 @@ class TicketResponse(BaseModel):
     status: TicketStatus
     source: TicketSource
     created_at: datetime   
+    ai_priority: TicketPriority | None = None
+    ai_confidence_score: float | None = None
+    classification_source: str = "rule_engine"

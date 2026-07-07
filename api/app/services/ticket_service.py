@@ -15,11 +15,19 @@ class TicketService:
     def create_ticket(self, ticket: TicketCreate) -> TicketResponse:
         rule_result = rule_engine.evaluate_ticket(ticket)
 
+        ai_priority = None
+        ai_confidence_score = None
+        classification_source = "rule_engine"
+
         if rule_result.matched and rule_result.priority is not None:
             priority = rule_result.priority
         else:
             ai_result = ai_classification_service.classify_ticket(ticket)
+
             priority = ai_result.recommended_priority
+            ai_priority = ai_result.recommended_priority
+            ai_confidence_score = ai_result.confidence
+            classification_source = "ai"
 
             if priority not in TicketPriority:
                 priority = TicketPriority.MEDIUM
@@ -33,6 +41,9 @@ class TicketService:
             status=TicketStatus.NEW,
             source=ticket.source,
             created_at=datetime.now(UTC),
+            ai_priority=ai_priority,
+            ai_confidence_score=ai_confidence_score,
+            classification_source=classification_source,
         )
 
 

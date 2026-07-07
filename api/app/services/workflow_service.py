@@ -117,7 +117,9 @@ Reason: {approval_result.reason}
                 db=db,
                 workflow_run=workflow_run,
                 final_priority=processed_ticket.priority,
-                classification_source="rule_engine_or_ai",
+                classification_source=processed_ticket.classification_source,
+                ai_priority=processed_ticket.ai_priority,
+                ai_confidence_score=processed_ticket.ai_confidence_score,
             )
 
             audit_log_service.record_event(
@@ -129,13 +131,13 @@ Reason: {approval_result.reason}
 
             slack_notification_service.send_message(
                 f"""
-:white_check_mark: Workflow Completed
+                :white_check_mark: Workflow Completed
 
-Issue: {persisted_ticket.jira_issue_key}
-Priority: {processed_ticket.priority.value}
-Status: Completed
-Classification: Rule Engine
-"""
+                Issue: {persisted_ticket.jira_issue_key}
+                Priority: {processed_ticket.priority.value}
+                Status: Completed
+                Classification: {processed_ticket.classification_source}
+                """
             )
 
             logger.info("Workflow completed for Jira issue %s", persisted_ticket.jira_issue_key)
