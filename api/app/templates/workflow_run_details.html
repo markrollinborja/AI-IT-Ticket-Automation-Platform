@@ -61,12 +61,12 @@
                 <div class="row g-3">
                     <div class="col-md-4">
                         <div class="text-muted small">Status</div>
-                        <div class="fw-bold">{{ workflow_run.status }}</div>
+                        <div class="fw-bold">{{ workflow_run.status|format_status }}</div>
                     </div>
 
                     <div class="col-md-4">
                         <div class="text-muted small">Final Priority</div>
-                        <div class="fw-bold">{{ workflow_run.final_priority or "-" }}</div>
+                        <div class="fw-bold">{{ workflow_run.final_priority|format_priority }}</div>
                     </div>
 
                     <div class="col-md-4">
@@ -76,7 +76,7 @@
                         {% elif workflow_run.final_category == "rule_engine" %}
                             <span class="badge text-bg-secondary">Rule Engine</span>
                         {% else %}
-                            <span class="badge text-bg-light text-dark">{{ workflow_run.final_category or "-" }}</span>
+                            <span class="badge text-bg-light text-dark">{{ workflow_run.final_category|format_category }}</span>
                         {% endif %}
                     </div>
 
@@ -103,20 +103,20 @@
 
                     <div class="col-md-4">
                         <div class="text-muted small">Workflow ID</div>
-                        <code>{{ workflow_run.id }}</code>
+                        <code class="text-secondary">{{ workflow_run.id }}</code>
                     </div>
 
                     {% if workflow_run.ai_priority %}
                     <div class="col-md-4">
                         <div class="text-muted small">AI Priority</div>
-                        <div class="fw-bold">{{ workflow_run.ai_priority }}</div>
+                        <div class="fw-bold">{{ workflow_run.ai_priority|format_priority }}</div>
                     </div>
                     {% endif %}
 
                     {% if workflow_run.ai_confidence_score %}
                     <div class="col-md-4">
                         <div class="text-muted small">AI Confidence Score</div>
-                        <div class="fw-bold">{{ workflow_run.ai_confidence_score }}</div>
+                        <div class="fw-bold">{{ workflow_run.ai_confidence_score|format_confidence }}</div>
                     </div>
                     {% endif %}
                 </div>
@@ -130,13 +130,13 @@
 
             <div class="card-body">
                 {% for log in audit_logs %}
-                    <div class="d-flex mb-3">
+                    <div class="d-flex mb-4">
                         <div class="me-3">
                             <span class="badge rounded-pill text-bg-success">✓</span>
                         </div>
 
                         <div>
-                            <div class="fw-bold">{{ log.event }}</div>
+                            <div class="fw-bold">{{ log.event|format_audit_event }}</div>
                             <div class="text-muted small">{{ log.created_at|format_datetime }}</div>
                             <div>{{ log.message }}</div>
                         </div>

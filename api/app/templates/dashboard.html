@@ -76,8 +76,7 @@
                             <th>Priority</th>
                             <th>Classification Source</th>
                             <th>Approval Required</th>
-                            <th>Started At</th>
-                            <th>Completed At</th>
+                            <th>Processed At</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -92,7 +91,7 @@
                                 {% elif run.status == "pending_approval" %}
                                     <span class="badge text-bg-warning">Pending Approval</span>
                                 {% else %}
-                                    <span class="badge text-bg-secondary">{{ run.status }}</span>
+                                    <span class="badge text-bg-secondary">{{ run.status|format_status }}</span>
                                 {% endif %}
                             </td>
 
@@ -127,7 +126,7 @@
                                 {% elif run.final_category == "rule_engine" %}
                                     <span class="badge text-bg-secondary">Rule Engine</span>
                                 {% else %}
-                                    <span class="badge text-bg-light text-dark">{{ run.final_category or "-" }}</span>
+                                    <span class="badge text-bg-light text-dark">{{ run.final_category|format_category }}</span>
                                 {% endif %}
                             </td>
 
@@ -139,7 +138,6 @@
                                 {% endif %}
                             </td>
 
-                            <td>{{ run.started_at|format_datetime }}</td>
                             <td>{{ run.completed_at|format_datetime }}</td>
 
                             <td>
@@ -151,7 +149,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 No workflow runs found.
                             </td>
                         </tr>

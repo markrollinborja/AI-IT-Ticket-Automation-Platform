@@ -1,4 +1,5 @@
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
@@ -17,7 +18,55 @@ def format_datetime(value):
     if value is None:
         return "-"
 
-    return value.strftime("%b %d, %Y %I:%M %p UTC")
+    chicago_time = value.astimezone(ZoneInfo("America/Chicago"))
+    return chicago_time.strftime("%b %d, %Y %I:%M %p %Z")
+
+
+def format_status(value):
+    if not value:
+        return "-"
+
+    return value.replace("_", " ").title()
+
+
+def format_priority(value):
+    if not value:
+        return "-"
+
+    return value.title()
+
+
+def format_category(value):
+    if not value:
+        return "-"
+
+    category_map = {
+        "ai": "AI",
+        "rule_engine": "Rule Engine",
+        "rule_engine_or_ai": "Rule Engine or AI",
+    }
+
+    return category_map.get(value, value.replace("_", " ").title())
+
+
+def format_confidence(value):
+    if value is None:
+        return "-"
+
+    return f"{round(value * 100)}%"
+
+
+def format_audit_event(value):
+    event_map = {
+        "workflow_started": "Workflow Started",
+        "approval_required": "Approval Required",
+        "ticket_classified": "Priority Classified",
+        "jira_priority_updated": "Jira Updated",
+        "workflow_completed": "Processing Completed",
+        "workflow_failed": "Processing Failed",
+    }
+
+    return event_map.get(value, value.replace("_", " ").title())
 
 
 def format_duration(started_at, completed_at):
@@ -29,6 +78,11 @@ def format_duration(started_at, completed_at):
 
 
 templates.env.filters["format_datetime"] = format_datetime
+templates.env.filters["format_status"] = format_status
+templates.env.filters["format_priority"] = format_priority
+templates.env.filters["format_category"] = format_category
+templates.env.filters["format_confidence"] = format_confidence
+templates.env.filters["format_audit_event"] = format_audit_event
 templates.env.filters["format_duration"] = format_duration
 
 

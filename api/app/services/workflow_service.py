@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -13,6 +15,44 @@ from app.services.ticket_service import ticket_service
 from app.services.workflow_run_service import workflow_run_service
 
 logger = logging.getLogger(__name__)
+
+
+def format_processed_at() -> str:
+    return datetime.now(
+        ZoneInfo("America/Chicago")
+    ).strftime("%b %d, %Y %I:%M %p %Z")
+
+
+def format_priority(priority: str) -> str:
+    priority_map = {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+    }
+
+    return priority_map.get(priority.lower(), priority.title())
+
+
+def format_classification_source(classification_source: str) -> str:
+    source_map = {
+        "ai": "AI",
+        "rule_engine": "Rule Engine",
+    }
+
+    return source_map.get(classification_source, classification_source)
+
+
+def truncate_text(text: str, max_length: int = 500) -> str:
+    if not text:
+        return "-"
+
+    cleaned_text = text.strip()
+
+    if len(cleaned_text) <= max_length:
+        return cleaned_text
+
+    return f"{cleaned_text[:max_length].rstrip()}..."
 
 
 class WorkflowService:
@@ -62,11 +102,27 @@ class WorkflowService:
 
             slack_notification_service.send_message(
                 f"""
-:warning: Approval Required
+*Approval Required*
 
-Issue: {persisted_ticket.jira_issue_key}
-Reporter: {persisted_ticket.reporter}
-Reason: {approval_result.reason}
+--------------------------------
+
+*Ticket:* {persisted_ticket.title}
+
+*Processed At:* {format_processed_at()}
+
+*Reporter:* {persisted_ticket.reporter}
+
+*Jira Issue:* {persisted_ticket.jira_issue_key}
+
+*Reason:* {approval_result.reason or "Human approval required."}
+
+--------------------------------
+
+*Issue Description*
+
+{truncate_text(persisted_ticket.description)}
+
+--------------------------------
 """
             )
 
@@ -131,13 +187,30 @@ Reason: {approval_result.reason}
 
             slack_notification_service.send_message(
                 f"""
-                :white_check_mark: Workflow Completed
+:white_check_mark: *Ticket Processed*
 
-                Issue: {persisted_ticket.jira_issue_key}
-                Priority: {processed_ticket.priority.value}
-                Status: Completed
-                Classification: {processed_ticket.classification_source}
-                """
+--------------------------------
+
+*Ticket:* {persisted_ticket.title}
+
+*Processed At:* {format_processed_at()}
+
+*Reporter:* {persisted_ticket.reporter}
+
+*Jira Issue:* {persisted_ticket.jira_issue_key}
+
+*Priority:* {format_priority(processed_ticket.priority.value)}
+
+*Classification:* {format_classification_source(processed_ticket.classification_source)}
+
+--------------------------------
+
+*Issue Description*
+
+{truncate_text(persisted_ticket.description)}
+
+--------------------------------
+"""
             )
 
             logger.info("Workflow completed for Jira issue %s", persisted_ticket.jira_issue_key)
@@ -163,11 +236,29 @@ Reason: {approval_result.reason}
 
             slack_notification_service.send_message(
                 f"""
-:x: Workflow Failed
+*Ticket Processing Failed*
 
-Issue: {persisted_ticket.jira_issue_key}
-Error: {type(error).__name__}
-Message: {str(error)}
+--------------------------------
+
+*Ticket:* {persisted_ticket.title}
+
+*Processed At:* {format_processed_at()}
+
+*Reporter:* {persisted_ticket.reporter}
+
+*Jira Issue:* {persisted_ticket.jira_issue_key}
+
+*Error:* {type(error).__name__}
+
+*Message:* {str(error)}
+
+--------------------------------
+
+*Issue Description*
+
+{truncate_text(persisted_ticket.description)}
+
+--------------------------------
 """
             )
 
