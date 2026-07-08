@@ -34,7 +34,7 @@ The platform follows a **Jira-first, Rule Engine-first** architecture designed t
 The reporter creates a Jira ticket and selects an initial priority. The submitted priority is treated as user input and is automatically evaluated by the automation platform after submission.
 
 <p align="center">
-    <img src="images/01-jira-create-rule-engine-ticket.png" width="100%">
+    <img src="screenshots/01-jira-create-rule-engine-ticket.png" width="100%">
 </p>
 
 ---
@@ -44,7 +44,7 @@ The reporter creates a Jira ticket and selects an initial priority. The submitte
 When a ticket does not match deterministic business rules, the platform delegates classification to OpenAI.
 
 <p align="center">
-    <img src="images/02-jira-create-ai-ticket.png" width="100%">
+    <img src="screenshots/02-jira-create-ai-ticket.png" width="100%">
 </p>
 
 ---
@@ -54,7 +54,7 @@ When a ticket does not match deterministic business rules, the platform delegate
 Jira is the system of record. Every newly created issue automatically triggers the automation workflow through a Jira webhook.
 
 <p align="center">
-    <img src="images/03-jira-ticket-list.png" width="100%">
+    <img src="screenshots/03-jira-ticket-list.png" width="100%">
 </p>
 
 ---
@@ -64,7 +64,7 @@ Jira is the system of record. Every newly created issue automatically triggers t
 The dashboard provides operational visibility into every workflow execution, including workflow status, final priority, classification source, approval state, and execution history.
 
 <p align="center">
-    <img src="images/04-workflow-dashboard.png" width="100%">
+    <img src="screenshots/04-workflow-dashboard.png" width="100%">
 </p>
 
 ---
@@ -74,7 +74,7 @@ The dashboard provides operational visibility into every workflow execution, inc
 Deterministic tickets are classified immediately using predefined business rules without invoking AI.
 
 <p align="center">
-    <img src="images/05-workflow-details-rule-engine.png" width="100%">
+    <img src="screenshots/05-workflow-details-rule-engine.png" width="100%">
 </p>
 
 ---
@@ -84,7 +84,7 @@ Deterministic tickets are classified immediately using predefined business rules
 When no deterministic rule matches, OpenAI classifies the ticket priority. The workflow records the AI-generated priority, confidence score, and complete execution history.
 
 <p align="center">
-    <img src="images/06-workflow-details-ai.png" width="100%">
+    <img src="screenshots/06-workflow-details-ai.png" width="100%">
 </p>
 
 ---
@@ -94,7 +94,7 @@ When no deterministic rule matches, OpenAI classifies the ticket priority. The w
 After processing completes, the platform sends a formatted Slack notification containing the ticket details, final priority, classification source, and workflow completion time.
 
 <p align="center">
-    <img src="images/07-slack-notification.png" width="100%">
+    <img src="screenshots/07-slack-notification.png" width="100%">
 </p>
 
 ---
