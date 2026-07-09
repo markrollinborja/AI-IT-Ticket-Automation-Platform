@@ -17,6 +17,23 @@ This project demonstrates enterprise workflow automation using modern backend en
 
 ---
 
+# Demo
+
+The animation below demonstrates the complete end-to-end workflow:
+
+- Create a Jira ticket
+- Jira webhook triggers the automation
+- Rule Engine or OpenAI classifies the ticket
+- Jira priority is updated automatically
+- Slack notification is sent
+- Workflow execution appears in the dashboard
+
+<p align="center">
+    <img src="demo/demo.gif" width="100%" alt="AI IT Ticket Automation Platform Demo">
+</p>
+
+---
+
 # System Architecture
 
 The platform follows a **Jira-first, Rule Engine-first** architecture designed to mirror enterprise IT automation workflows.
