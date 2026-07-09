@@ -28,9 +28,7 @@ The animation below demonstrates the complete end-to-end workflow:
 - Slack notification is sent
 - Workflow execution appears in the dashboard
 
-<p align="center">
-    <img src="demo/demo.gif" width="100%" alt="AI IT Ticket Automation Platform Demo">
-</p>
+![AI IT Ticket Automation Platform Demo](https://raw.githubusercontent.com/markrollinborja/AI-IT-Ticket-Automation-Platform/main/demo/demo.gif)
 
 ---
 
