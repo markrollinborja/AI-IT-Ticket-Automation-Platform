@@ -7,15 +7,19 @@ backend engineering, workflow automation, third-party API integrations, AI-assis
 decision making, and the professional engineering practices a real team uses to ship and
 maintain software.
 
-The roadmap is split into two versions with different goals:
+The roadmap is split into versions with different goals:
 
 - **Version 1** built the business functionality: Jira integration, the Rule Engine + AI
   hybrid classification workflow, Slack notifications, and the dashboard.
-- **Version 2** did not add new business features. It turned the working V1 prototype into
-  something that looks and behaves like a real team's codebase: tested, linted, scanned for
-  security issues, documented, and deployable with a single command.
+- **Version 2** turned the working V1 prototype into something that looks and behaves like
+  a real team's codebase: tested, linted, scanned for security issues, documented, and
+  deployable with a single command. It also picked up one piece of real new functionality
+  along the way - the approval workflow - which is called out separately below since it
+  doesn't fit "engineering practices, not features."
+- **Version 3** is public deployment: taking this from "runs on localhost" to "a live URL a
+  hiring manager can actually click." Not started yet - see below.
 
-Both are feature-complete as of this writing.
+Version 1 and Version 2 are feature-complete as of this writing.
 
 ---
 
@@ -135,23 +139,36 @@ out separately rather than blending it into the engineering-practices list above
 
 # In Progress
 
-Nothing is actively in progress. Both Version 1 and Version 2 are feature-complete.
+Nothing is actively in progress. Version 1 and Version 2 are feature-complete.
 
 ---
 
-# Next Highest ROI Feature
+# Version 3 (Next)
 
-## Public deployment
+## Goal
 
-Deploy the platform to a public host (e.g. Render, Railway, or Fly.io) with a managed
-Postgres instance, and verify the full webhook → Rule Engine/AI → Jira → Slack → dashboard
-flow works end-to-end against the live deployment.
+Public deployment: take this from "runs on `localhost`" to a live URL, so a hiring manager
+can click through the real thing instead of reading code. Everything needed to deploy
+responsibly is already in place from Version 2 - CI, health/readiness checks,
+containerization, environment-based config - so this is entirely about hosting and access
+control, not more application engineering.
 
-This is the highest-ROI next step because everything needed to deploy responsibly is
-already in place — CI, health/readiness checks, containerization, and environment-based
-config — and a live URL turns this from "code a hiring manager can read" into "a system
-a hiring manager can actually click through," which is a meaningfully stronger portfolio
-signal for Automation/Backend/Internal Tools Engineer roles.
+## Planned Scope
+
+- **Hosting: Render (app) + Neon (Postgres).** Both have genuinely permanent free tiers
+  (not trials) - Render's own bundled Postgres was considered and rejected because its free
+  tier expires 30 days after creation and gets deleted after a 14-day grace period, which
+  doesn't work for a project meant to sit on a resume indefinitely. The tradeoff is a
+  30-60 second cold start on the first request after either service has been idle
+  (Render: 15 min, Neon: 5 min) - acceptable for a portfolio demo, not acceptable for a
+  real production SLA.
+- **Basic access protection.** Zero authentication exists today (see
+  [09-authentication-strategy.md](09-authentication-strategy.md)), which is fine on
+  `localhost` but not once real Jira/Slack/OpenAI credentials are reachable from the public
+  internet. A shared bearer token protecting the dashboard/API, plus some form of webhook
+  origin check, should ship alongside the deployment itself rather than after it.
+- Verify the full webhook → Rule Engine/AI → Jira → Slack → dashboard → approval flow
+  works end-to-end against the live deployment, the same way it was verified locally.
 
 ---
 
@@ -175,7 +192,6 @@ complexity:
 
 ## Platform
 
-- Authentication (bearer token or similar) for dashboard/admin endpoints
 - Email notifications alongside Slack
 - Structured (JSON) logging, if log aggregation ever becomes relevant
 - A schema migration tool (e.g. Alembic) if the schema starts changing often enough that
