@@ -1,0 +1,40 @@
+# Runs automatically on every `git commit`, catching problems before they
+# even reach GitHub - faster feedback than waiting for CI to fail.
+#
+# One-time setup after cloning the repo:
+#   pip install -r api/requirements-dev.txt
+#   pre-commit install
+#
+# After that, these hooks run against whatever files are staged, every
+# time you commit. To run them against the whole repo on demand (useful
+# right after adding/changing this file):
+#   pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # Same Ruff version pinned in api/requirements-dev.txt, so local
+  # pre-commit and CI apply identical rules.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.22
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  # Scans staged changes for hardcoded secrets (API keys, tokens,
+  # credentials) before they can ever be committed. This project talks to
+  # Jira, Slack, and OpenAI, so a leaked credential here is a real risk,
+  # not a theoretical one.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
