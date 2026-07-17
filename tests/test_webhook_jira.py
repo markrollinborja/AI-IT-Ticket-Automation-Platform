@@ -81,12 +81,7 @@ def test_webhook_requires_approval_for_executive_reporter(client, db_session, mo
     assert len(mock_jira_and_slack.jira_calls) == 0
     assert len(mock_jira_and_slack.slack_messages) == 1
 
-    workflow_run = (
-        db_session.query(WorkflowRun)
-        .join(Ticket)
-        .filter(Ticket.jira_issue_key == "IT-102")
-        .one()
-    )
+    workflow_run = db_session.query(WorkflowRun).join(Ticket).filter(Ticket.jira_issue_key == "IT-102").one()
     assert workflow_run.status == "pending_approval"
     assert workflow_run.approval_required is True
 

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from app.core.config import settings
 
 router = APIRouter()
@@ -10,5 +11,5 @@ def health_check():
         "status": "healthy",
         "service": "AI IT Ticket Automation Platform API",
         "version": settings.app_version,
-        "environment": settings.environment
+        "environment": settings.environment,
     }

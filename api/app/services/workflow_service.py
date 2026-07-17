@@ -18,9 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def format_processed_at() -> str:
-    return datetime.now(
-        ZoneInfo("America/Chicago")
-    ).strftime("%b %d, %Y %I:%M %p %Z")
+    return datetime.now(ZoneInfo("America/Chicago")).strftime("%b %d, %Y %I:%M %p %Z")
 
 
 def format_priority(priority: str) -> str:
@@ -162,11 +160,15 @@ class WorkflowService:
                 priority=processed_ticket.priority,
             )
 
+            jira_priority_update_message = (
+                f"Jira issue {persisted_ticket.jira_issue_key} "
+                f"priority updated to {processed_ticket.priority.value}."
+            )
             audit_log_service.record_event(
                 db=db,
                 workflow_run_id=workflow_run.id,
                 event="jira_priority_updated",
-                message=f"Jira issue {persisted_ticket.jira_issue_key} priority updated to {processed_ticket.priority.value}.",
+                message=jira_priority_update_message,
             )
 
             workflow_run_service.mark_completed(

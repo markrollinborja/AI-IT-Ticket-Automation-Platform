@@ -34,10 +34,6 @@ os.environ.setdefault("OPENAI_MODEL", "gpt-4o-mini")
 
 import psycopg2
 import pytest
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-
 from app.db.base import Base
 
 # Importing these registers every table on Base.metadata. Without this,
@@ -46,6 +42,9 @@ from app.db.base import Base
 from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.ticket import Ticket  # noqa: F401
 from app.models.workflow_run import WorkflowRun  # noqa: F401
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
 
 
 def _ensure_test_database_exists(database_url: str) -> None:
@@ -137,10 +136,9 @@ def db_session(db_engine):
 def client(db_session):
     """A FastAPI TestClient wired to the transactional test session instead
     of the app's real database connection, via dependency override."""
-    from fastapi.testclient import TestClient
-
     from app.db.session import get_db
     from app.main import app
+    from fastapi.testclient import TestClient
 
     def override_get_db():
         yield db_session

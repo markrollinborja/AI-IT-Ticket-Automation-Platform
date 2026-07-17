@@ -1,17 +1,22 @@
 from fastapi import FastAPI
 
+from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.health import router as health_router
-from app.core.config import settings
 from app.api.routes.tickets import router as tickets_router
 from app.api.routes.webhooks import router as webhooks_router
+from app.api.routes.workflow_runs import router as workflow_runs_router
+from app.core.config import settings
+from app.core.logging import configure_logging
 from app.db.base import Base
 from app.db.session import engine
-from app.models.ticket import Ticket
-from app.models.workflow_run import WorkflowRun
-from app.models.audit_log import AuditLog
-from app.core.logging import configure_logging
-from app.api.routes.workflow_runs import router as workflow_runs_router
-from app.api.routes.dashboard import router as dashboard_router
+
+# Imported for their side effect: registering each model's table on
+# Base.metadata so create_all() below knows about them. Don't remove
+# these even though nothing in this file calls Ticket/WorkflowRun/
+# AuditLog directly - doing so would silently stop creating their tables.
+from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.ticket import Ticket  # noqa: F401
+from app.models.workflow_run import WorkflowRun  # noqa: F401
 
 configure_logging()
 
@@ -20,7 +25,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="Backend API for automating IT ticket triage, routing, and notifications."
+    description="Backend API for automating IT ticket triage, routing, and notifications.",
 )
 
 app.include_router(health_router)

@@ -12,7 +12,6 @@ so a failing test tells you immediately which rule broke.
 """
 
 import pytest
-
 from app.schemas.ticket import TicketPriority
 from app.services.rule_engine import rule_engine
 

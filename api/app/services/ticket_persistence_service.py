@@ -10,11 +10,7 @@ class TicketPersistenceService:
         db: Session,
         event: JiraWebhookEvent,
     ) -> Ticket:
-        existing_ticket = (
-            db.query(Ticket)
-            .filter(Ticket.jira_issue_key == event.issue.key)
-            .first()
-        )
+        existing_ticket = db.query(Ticket).filter(Ticket.jira_issue_key == event.issue.key).first()
 
         if existing_ticket:
             return existing_ticket

@@ -1,8 +1,9 @@
 from datetime import datetime
 from enum import Enum
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from pydantic import BaseModel
+
 
 class TicketPriority(str, Enum):
     LOW = "low"
@@ -22,6 +23,7 @@ class TicketSource(str, Enum):
     JIRA = "jira"
     MANUAL = "manual"
 
+
 class TicketCreate(BaseModel):
     title: str
     description: str
@@ -37,7 +39,7 @@ class TicketResponse(BaseModel):
     priority: TicketPriority
     status: TicketStatus
     source: TicketSource
-    created_at: datetime   
+    created_at: datetime
     ai_priority: TicketPriority | None = None
     ai_confidence_score: float | None = None
     classification_source: str = "rule_engine"

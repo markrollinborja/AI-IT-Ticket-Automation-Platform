@@ -19,9 +19,9 @@ class AIClient:
         self.model = settings.openai_model
 
     def classify_priority(
-    self,
-    summary: str,
-    description: str,
+        self,
+        summary: str,
+        description: str,
     ) -> str:
         response = self.client.chat.completions.create(
             model=self.model,
@@ -29,8 +29,8 @@ class AIClient:
             response_format={"type": "json_object"},
             messages=[
                 {
-                        "role": "system",
-                        "content": """
+                    "role": "system",
+                    "content": """
                     You are an enterprise IT Service Desk ticket classifier.
 
                     Your responsibility is to classify ONLY the priority of IT support tickets.
@@ -111,14 +111,11 @@ class AIClient:
                         "priority": "high",
                         "confidence_score": 0.91
                     }
-                    """
+                    """,
                 },
                 {
                     "role": "user",
-                    "content": (
-                        f"Summary:\n{summary}\n\n"
-                        f"Description:\n{description}"
-                    ),
+                    "content": (f"Summary:\n{summary}\n\nDescription:\n{description}"),
                 },
             ],
         )

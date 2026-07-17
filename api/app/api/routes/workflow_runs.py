@@ -12,11 +12,7 @@ router = APIRouter(prefix="/workflow-runs", tags=["Workflow Runs"])
 
 @router.get("")
 def list_workflow_runs(db: Session = Depends(get_db)):
-    return (
-        db.query(WorkflowRun)
-        .order_by(WorkflowRun.created_at.desc())
-        .all()
-    )
+    return db.query(WorkflowRun).order_by(WorkflowRun.created_at.desc()).all()
 
 
 @router.get("/{workflow_run_id}")
@@ -24,11 +20,7 @@ def get_workflow_run(
     workflow_run_id: UUID,
     db: Session = Depends(get_db),
 ):
-    workflow_run = (
-        db.query(WorkflowRun)
-        .filter(WorkflowRun.id == workflow_run_id)
-        .first()
-    )
+    workflow_run = db.query(WorkflowRun).filter(WorkflowRun.id == workflow_run_id).first()
 
     if workflow_run is None:
         raise HTTPException(status_code=404, detail="Workflow run not found")
@@ -41,11 +33,7 @@ def get_workflow_run_audit_logs(
     workflow_run_id: UUID,
     db: Session = Depends(get_db),
 ):
-    workflow_run = (
-        db.query(WorkflowRun)
-        .filter(WorkflowRun.id == workflow_run_id)
-        .first()
-    )
+    workflow_run = db.query(WorkflowRun).filter(WorkflowRun.id == workflow_run_id).first()
 
     if workflow_run is None:
         raise HTTPException(status_code=404, detail="Workflow run not found")

@@ -173,27 +173,31 @@ class RuleEngine:
             )
 
         # High: business-impacting printer issue
-        if self._contains_any(text, ["printer", "printing"]) and self._contains_any(
-            text,
-            [
-                "cannot print",
-                "can't print",
-                "not printing",
-                "print queue",
-                "printer down",
-                "offline",
-            ],
-        ) and self._contains_any(
-            text,
-            [
-                "department",
-                "office",
-                "clinic",
-                "warehouse",
-                "front desk",
-                "shipping",
-                "receiving",
-            ],
+        if (
+            self._contains_any(text, ["printer", "printing"])
+            and self._contains_any(
+                text,
+                [
+                    "cannot print",
+                    "can't print",
+                    "not printing",
+                    "print queue",
+                    "printer down",
+                    "offline",
+                ],
+            )
+            and self._contains_any(
+                text,
+                [
+                    "department",
+                    "office",
+                    "clinic",
+                    "warehouse",
+                    "front desk",
+                    "shipping",
+                    "receiving",
+                ],
+            )
         ):
             return RuleEngineResult(
                 matched=True,

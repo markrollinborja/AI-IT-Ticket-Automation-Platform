@@ -4,3 +4,41 @@
 # the same way the app itself does: `from app.services... import ...`.
 pythonpath = ["api"]
 testpaths = ["tests"]
+
+[tool.ruff]
+# Matches the Python version actually used to run this project (see
+# .github/workflows/ci.yml), not the older version in the README badge.
+target-version = "py313"
+# The existing codebase already runs slightly wider than Black's 88-char
+# default (several files sit around 100-110 chars). Matching that instead
+# of forcing an 88-char rewrite across every file keeps this PR focused
+# on adding the tool, not reformatting unrelated code.
+line-length = 110
+extend-exclude = ["api/venv", ".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes - unused imports, undefined names, etc.
+    "I",  # isort - import sorting (replaces a separate isort tool)
+    "UP", # pyupgrade - flags outdated Python syntax patterns
+    "B",  # flake8-bugbear - catches common real-world bug patterns
+]
+ignore = [
+    # This project's TicketPriority/TicketStatus/TicketSource enums inherit
+    # from (str, Enum) and are used everywhere: as SQLAlchemy column values,
+    # dict keys (jira_service.PRIORITY_MAP), and JSON-serialized API
+    # responses. Ruff suggests migrating to enum.StrEnum instead, which is
+    # the modern equivalent, but StrEnum has subtly different __str__/
+    # formatting behavior. Changing a type used this widely deserves its own
+    # reviewed change, not a side effect of adopting a linter.
+    "UP042",
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's `Depends(...)` in a function default isn't the "mutable default
+# argument" bug bugbear's B008 rule exists to catch - it's the intended,
+# documented way to declare a dependency. Every DB-backed route in this
+# project uses `db: Session = Depends(get_db)`, so without this, B008 would
+# fire on nearly every endpoint for following a FastAPI convention.
+extend-immutable-calls = ["fastapi.Depends"]
