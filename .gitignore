@@ -13,8 +13,10 @@ __pycache__/
 .venv/
 venv/
 
-# VS Code
-.vscode/
+# VS Code - share settings.json (project-level config, like Python import
+# paths) but not personal/machine-specific VS Code state
+.vscode/*
+!.vscode/settings.json
 
 # macOS
 .DS_Store
