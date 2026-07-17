@@ -1,5 +1,6 @@
 # AI IT Ticket Automation Platform
 
+![CI](https://github.com/markrollinborja/AI-IT-Ticket-Automation-Platform/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)

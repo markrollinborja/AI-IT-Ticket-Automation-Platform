@@ -1,0 +1,58 @@
+name: CI
+
+# Run the test suite automatically on every push and every pull request
+# targeting main. This is what turns "I ran pytest on my machine" into
+# "every change is verified the same way, every time" - the difference
+# between a personal script and an actual engineering practice.
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # A real Postgres instance, spun up just for this CI run and thrown
+    # away afterward. This matches the "test against real Postgres, not
+    # SQLite" decision from tests/conftest.py - the same fixtures that
+    # work on a developer's machine work here unchanged.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # tests/conftest.py only sets DATABASE_URL if it isn't already set
+    # (os.environ.setdefault), so this overrides the local-dev default
+    # (port 5433) with the port this job's Postgres service is actually
+    # running on (5432) - no code changes needed to run in both places.
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_ticket_automation_test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+          cache-dependency-path: api/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r api/requirements-dev.txt
+
+      - name: Run tests
+        run: pytest --cov=app --cov-report=term-missing
