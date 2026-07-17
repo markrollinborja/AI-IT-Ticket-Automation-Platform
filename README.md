@@ -230,6 +230,25 @@ pytest
 Run from the repository root. `pytest.ini_options` in `pyproject.toml` adds `api/` to the
 Python path so tests can import the app the same way the app imports itself.
 
+## Development Setup
+
+Linting and formatting run through [Ruff](https://docs.astral.sh/ruff/), configured in
+`pyproject.toml`:
+
+```bash
+ruff check .
+ruff format .
+```
+
+Pre-commit hooks run Ruff, a secrets scanner (gitleaks), and basic file hygiene checks
+automatically on every commit:
+
+```bash
+pre-commit install
+```
+
+CI (GitHub Actions) runs the same lint and test checks on every push and pull request.
+
 ---
 
 ## Architecture & Design Decisions
