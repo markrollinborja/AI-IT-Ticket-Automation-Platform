@@ -1,0 +1,6 @@
+[tool.pytest.ini_options]
+# The app package lives under api/app, but nothing installs it as a package,
+# so we add "api" to sys.path for the test run. This lets tests import it
+# the same way the app itself does: `from app.services... import ...`.
+pythonpath = ["api"]
+testpaths = ["tests"]

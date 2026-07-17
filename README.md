@@ -217,6 +217,20 @@ After processing completes, the platform sends a formatted Slack notification co
 
 ---
 
+## Running Tests
+
+The test suite covers backend business logic, starting with the Rule Engine.
+
+```bash
+pip install -r api/requirements-dev.txt
+pytest
+```
+
+Run from the repository root. `pytest.ini_options` in `pyproject.toml` adds `api/` to the
+Python path so tests can import the app the same way the app imports itself.
+
+---
+
 ## Architecture & Design Decisions
 
 ### Jira-first architecture

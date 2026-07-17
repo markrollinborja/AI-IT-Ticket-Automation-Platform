@@ -1,0 +1,6 @@
+# Dependencies needed for local development and running the test suite.
+# Install with: pip install -r api/requirements-dev.txt
+-r requirements.txt
+
+pytest==8.3.4
+pytest-cov==6.0.0
