@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Python dependencies pinned in api/requirements.txt and
+  # api/requirements-dev.txt. Dependabot opens a PR whenever a newer
+  # version is available, so upgrades happen in small, reviewable
+  # increments instead of piling up until something forces a big one.
+  - package-ecosystem: "pip"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # Action versions used in .github/workflows/ci.yml
+  # (actions/checkout, actions/setup-python, etc.).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Hook revisions pinned in .pre-commit-config.yaml
+  # (ruff-pre-commit, gitleaks, pre-commit-hooks).
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"

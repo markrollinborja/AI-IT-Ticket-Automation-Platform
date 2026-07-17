@@ -37,6 +37,27 @@ jobs:
       - name: Run Ruff format check
         run: ruff format --check .
 
+  security:
+    runs-on: ubuntu-latest
+    # Scans pinned dependency versions against known vulnerability
+    # databases (OSV, PyPI advisories). This is different from Dependabot:
+    # Dependabot tells you when a *newer* version exists; pip-audit tells
+    # you when your *current, already-pinned* version has a known CVE -
+    # both matter, and they run independently of each other.
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Audit dependencies for known vulnerabilities
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: api/requirements.txt api/requirements-dev.txt
+
   test:
     runs-on: ubuntu-latest
 
