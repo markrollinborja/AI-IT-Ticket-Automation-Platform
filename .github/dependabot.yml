@@ -9,6 +9,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # Without this, Dependabot opens one PR per outdated package (we saw
+    # 13 at once on first run). Grouping combines them into a single PR
+    # per ecosystem instead - one thing to review each week, not a dozen.
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
 
   # Action versions used in .github/workflows/ci.yml
   # (actions/checkout, actions/setup-python, etc.).
@@ -16,6 +23,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   # Hook revisions pinned in .pre-commit-config.yaml
   # (ruff-pre-commit, gitleaks, pre-commit-hooks).
@@ -23,3 +34,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      pre-commit-hooks:
+        patterns:
+          - "*"
