@@ -44,6 +44,10 @@ A failure in one ticket workflow shall not prevent other workflows from executin
 
 All API endpoints shall require authentication except designated health check endpoints.
 
+**Status: not yet implemented.** No authentication currently exists on any endpoint. See
+[09-authentication-strategy.md](09-authentication-strategy.md) for the planned approach and
+why it's deferred — this NFR target is worth revisiting once the app is deployed publicly.
+
 ### NFR-008: Secret Management
 
 API keys, database credentials, and other secrets shall never be hardcoded in source code.

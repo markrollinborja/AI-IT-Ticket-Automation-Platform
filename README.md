@@ -173,7 +173,6 @@ After processing completes, the platform sends a formatted Slack notification co
 - FastAPI
 - SQLAlchemy
 - PostgreSQL
-- Alembic
 
 ### Artificial Intelligence
 

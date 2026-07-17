@@ -2,9 +2,12 @@
 
 ## Overview
 
-The AI IT Ticket Automation Platform uses PostgreSQL as the primary database for storing ticket metadata, workflow execution history, AI recommendations, business rule decisions, approvals, notifications, and audit logs.
+The AI IT Ticket Automation Platform uses PostgreSQL as the primary database for storing
+ticket metadata, workflow execution history, AI recommendations, and audit logs.
 
-The database is designed to support traceability, reporting, troubleshooting, and operational visibility.
+The database is designed to support traceability, troubleshooting, and operational
+visibility. This document describes the schema as actually implemented in
+`api/app/models/`.
 
 ---
 
@@ -12,7 +15,14 @@ The database is designed to support traceability, reporting, troubleshooting, an
 
 **Database:** PostgreSQL
 
-PostgreSQL was selected because it is reliable, widely adopted in enterprise environments, supports relational data modeling, and provides strong compatibility with FastAPI-based applications.
+PostgreSQL was selected because it is reliable, widely adopted in enterprise environments,
+supports relational data modeling, and provides strong compatibility with FastAPI-based
+applications.
+
+Tables are created via SQLAlchemy's `Base.metadata.create_all()` at application startup.
+There is no migration tool (e.g. Alembic) in place yet — see
+[project-roadmap.md](project-roadmap.md), Future Ideas, for when that would become worth
+adding.
 
 ---
 
@@ -25,102 +35,62 @@ Stores ticket data received from Jira.
 | Column | Type | Description |
 |--------|------|-------------|
 | id | UUID | Primary key |
-| jira_ticket_id | VARCHAR | Jira issue key |
-| title | TEXT | Ticket title |
+| jira_issue_key | VARCHAR(50) | Jira issue key, unique |
+| title | VARCHAR(255) | Ticket title |
 | description | TEXT | Ticket description |
-| reporter_email | VARCHAR | Ticket reporter |
-| status | VARCHAR | Current ticket status |
-| source_platform | VARCHAR | Source system, such as Jira |
-| created_at | TIMESTAMP | Ticket creation time |
-| updated_at | TIMESTAMP | Last update time |
+| reporter | VARCHAR(255) | Ticket reporter |
+| source | VARCHAR(50) | Source system (defaults to `jira`) |
+| created_at | TIMESTAMPTZ | Ticket creation time |
+| updated_at | TIMESTAMPTZ | Last update time |
 
 ---
 
-## 2. workflow_executions
+## 2. workflow_runs
 
-Tracks each automation workflow run.
+Tracks each automation workflow run for a ticket.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | UUID | Primary key |
-| ticket_id | UUID | Related ticket |
-| workflow_status | VARCHAR | Pending, processing, completed, failed |
-| ai_category | VARCHAR | AI-recommended category |
-| ai_priority | VARCHAR | AI-recommended priority |
-| ai_support_team | VARCHAR | AI-recommended support team |
-| ai_confidence_score | NUMERIC | AI confidence score |
-| final_category | VARCHAR | Final category after business rules |
-| final_priority | VARCHAR | Final priority after business rules |
-| final_support_team | VARCHAR | Final support team after business rules |
-| approval_required | BOOLEAN | Whether approval was required |
-| started_at | TIMESTAMP | Workflow start time |
-| completed_at | TIMESTAMP | Workflow completion time |
+| ticket_id | UUID | Foreign key → `tickets.id` |
+| status | VARCHAR(50) | `processing`, `completed`, `failed` |
+| ai_category | VARCHAR(100) | Reserved for future AI category classification (not populated in V1/V2 — see [16-ai-classification-strategy.md](16-ai-classification-strategy.md)) |
+| ai_priority | VARCHAR(50) | AI-recommended priority, when the Rule Engine had no match |
+| ai_support_team | VARCHAR(100) | Reserved for future AI support-team recommendation (not populated) |
+| ai_confidence_score | FLOAT | AI confidence score |
+| ai_missing_information | TEXT | Reserved for future use (not populated) |
+| ai_suggested_response | TEXT | Reserved for future use (not populated) |
+| final_category | VARCHAR(100) | Reserved for future use (not populated) |
+| final_priority | VARCHAR(50) | Final priority after Rule Engine / AI classification |
+| final_support_team | VARCHAR(100) | Reserved for future use (not populated) |
+| approval_required | BOOLEAN | Whether the workflow requires human approval before proceeding |
+| approval_reason | TEXT | Why approval was required |
+| error_type | VARCHAR(100) | Error type, if the workflow failed |
+| error_message | TEXT | Error details, if the workflow failed |
+| started_at | TIMESTAMPTZ | Workflow start time |
+| completed_at | TIMESTAMPTZ | Workflow completion time |
+| created_at | TIMESTAMPTZ | Row creation time |
+| updated_at | TIMESTAMPTZ | Last update time |
+
+A handful of columns (`ai_category`, `ai_support_team`, `ai_missing_information`,
+`ai_suggested_response`, `final_category`, `final_support_team`) exist on the model already
+but are intentionally unused right now — AI is scoped to priority classification only. They
+were added ahead of time so that expanding AI scope later is a service-layer change, not a
+schema migration.
 
 ---
 
-## 3. approvals
+## 3. audit_logs
 
-Stores human approval requests and decisions.
+Stores the workflow audit trail.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | UUID | Primary key |
-| workflow_execution_id | UUID | Related workflow execution |
-| approval_status | VARCHAR | Pending, approved, rejected |
-| approver_email | VARCHAR | Approver identity |
-| reason | TEXT | Reason approval was required |
-| decision_notes | TEXT | Notes from approver |
-| requested_at | TIMESTAMP | Approval request time |
-| decided_at | TIMESTAMP | Approval decision time |
-
----
-
-## 4. notifications
-
-Tracks Slack and email notifications.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| workflow_execution_id | UUID | Related workflow execution |
-| notification_type | VARCHAR | Slack or email |
-| recipient | VARCHAR | Notification recipient |
-| subject | TEXT | Notification subject |
-| message | TEXT | Notification message |
-| delivery_status | VARCHAR | Sent, failed, pending |
-| error_message | TEXT | Failure details |
-| sent_at | TIMESTAMP | Notification time |
-
----
-
-## 5. audit_logs
-
-Stores the complete workflow audit trail.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| workflow_execution_id | UUID | Related workflow execution |
-| event_type | VARCHAR | Type of event |
-| event_details | JSONB | Structured event details |
-| created_at | TIMESTAMP | Event timestamp |
-
----
-
-## 6. business_rules
-
-Stores configurable workflow rules.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| rule_name | VARCHAR | Rule name |
-| rule_type | VARCHAR | Priority, routing, approval, escalation |
-| condition | JSONB | Rule condition |
-| action | JSONB | Rule action |
-| is_active | BOOLEAN | Whether rule is enabled |
-| created_at | TIMESTAMP | Rule creation time |
-| updated_at | TIMESTAMP | Rule update time |
+| workflow_run_id | UUID | Foreign key → `workflow_runs.id` |
+| event | VARCHAR(100) | Event type (e.g. `rule_matched`, `jira_updated`, `slack_notified`) |
+| message | TEXT | Human-readable event description |
+| created_at | TIMESTAMPTZ | Event timestamp |
 
 ---
 
@@ -129,57 +99,52 @@ Stores configurable workflow rules.
 ```text
 tickets
    │
-   └── workflow_executions
+   └── workflow_runs
             │
-            ├── approvals
-            ├── notifications
             └── audit_logs
-
-business_rules
-   └── evaluated during workflow execution
 ```
+
+One ticket can have multiple workflow runs (e.g. if Jira resends a webhook). One workflow
+run can have multiple audit log entries recorded as it progresses.
 
 ---
 
 ## Design Decisions
 
-### Store AI Recommendations and Final Decisions
+### Store AI Recommendations and Final Decisions Separately
 
-The database stores both AI-generated recommendations and final business rule decisions.
+`workflow_runs` stores both the AI's recommendation (`ai_priority`,
+`ai_confidence_score`) and the final decision (`final_priority`) separately, even though
+in V1/V2 the final priority is always either the Rule Engine's result or a direct pass-through
+of the AI's result.
 
-This allows NorthStar Retail to compare what the AI recommended against what the workflow ultimately decided.
+This keeps AI output auditable independently of the final business decision, which matters
+if a future version introduces logic that can override or adjust the AI's recommendation.
 
-This supports auditability, troubleshooting, AI evaluation, and future workflow improvements.
+### Separate Audit Logs from Workflow Runs
 
----
-
-### Separate Audit Logs from Tickets
-
-Audit logs are stored separately from tickets because they represent workflow events over time.
-
-A ticket is the business entity. An audit log is a historical event.
-
-Separating them preserves workflow history without overloading the ticket table.
+Audit logs are a separate table rather than a JSON column on `workflow_runs` because they
+represent a sequence of events over time, not a single row's current state. This preserves
+a full timeline per workflow run without overloading the `workflow_runs` row itself.
 
 ---
 
-### Use JSONB for Flexible Rule and Event Data
+## Not Implemented
 
-The `business_rules` and `audit_logs` tables use JSONB fields for flexible structured data.
+The following were part of earlier planning but are **not** in the current schema. They are
+listed here so this document doesn't silently disagree with the code:
 
-This allows the platform to store different rule conditions, rule actions, and event details without requiring a new database column for every workflow variation.
+- **`approvals` table** — there is no separate approval request/decision entity.
+  `workflow_runs.approval_required` and `approval_reason` are the entire extent of the
+  approval feature: a boolean gate with a reason, evaluated at workflow time. There's no
+  approve/reject action or approver identity tracked.
+- **`notifications` table** — Slack messages are sent directly by
+  `slack_notification_service` and are not persisted as their own record. Whether a
+  notification was sent is only visible in the `audit_logs` entries for that workflow run.
+- **`business_rules` table** — rules are hardcoded in `app/services/rule_engine.py`, not
+  stored in the database or editable at runtime.
+- User profile management, role-based permissions, multi-tenant support — no auth exists
+  yet at all (see [09-authentication-strategy.md](09-authentication-strategy.md)).
 
----
-
-## Version 1 Scope
-
-The Version 1 database does not include:
-
-- User profile management
-- Advanced role-based permissions
-- Multi-tenant organization support
-- Custom dashboard preferences
-- Long-term AI training datasets
-- Full Jira data replication
-
-These items are outside the initial database scope.
+Building any of these is tracked as a Future Idea in
+[project-roadmap.md](project-roadmap.md), not a current gap to fix.

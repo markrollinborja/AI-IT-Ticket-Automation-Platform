@@ -2,135 +2,97 @@
 
 ## Overview
 
-The AI IT Ticket Automation Platform requires testing to ensure that workflow automation, external integrations, business rules, and API endpoints behave reliably.
+The AI IT Ticket Automation Platform requires testing to ensure that workflow automation,
+external integrations, business rules, and API endpoints behave reliably.
 
-Version 1 focuses on practical automated testing that provides confidence without slowing down delivery.
+**Status: implemented.** This was originally a Version 1 plan; the described approach was
+built out during Version 2 as part of the CI/testing work. See
+[project-roadmap.md](project-roadmap.md).
 
 ---
 
 ## Testing Goals
 
-The testing strategy should:
-
 - Validate core business logic.
 - Confirm API endpoint behavior.
-- Verify workflow execution.
-- Test business rules separately from AI recommendations.
-- Support safe changes during development.
-- Avoid unnecessary testing complexity for Version 1.
+- Verify workflow execution end-to-end.
+- Test business rules independently of AI.
+- Support safe changes during development via CI.
+- Avoid unnecessary testing complexity.
 
 ---
 
-## Test Types
+## What's Actually Tested (`tests/`)
 
-## Unit Tests
+### Unit tests — `test_rule_engine.py`
 
-Unit tests validate isolated business logic.
+12 parametrized tests plus a case-insensitivity test against the Rule Engine directly, with
+no database or mocking required.
 
-Examples:
+### Health/readiness tests — `test_health.py`
 
-- Business rule evaluation
-- Priority adjustment logic
-- Approval requirement logic
-- Notification payload formatting
-- AI response parsing
+`GET /health` returns ok; `GET /health/ready` returns ready when the database is reachable
+and `503` when it isn't (simulated by monkeypatching the DB session to raise).
 
-Unit tests provide fast feedback and are required for core workflow logic.
+### Webhook/workflow integration tests — `test_webhook_jira.py`
 
----
+The full `POST /webhooks/jira` flow against a real (test) PostgreSQL database, with Jira
+and Slack calls faked via `monkeypatch`:
 
-## Integration Tests
+- Successful classification via the Rule Engine, workflow completes
+- Approval required for an executive reporter
+- Unsupported event type is rejected
+- Jira update failure is handled safely and returns a clean `500` (not an unhandled crash)
 
-Integration tests validate how internal modules work together.
+### Test database
 
-Examples:
-
-- Jira webhook payload starts workflow execution.
-- AI analysis output is stored correctly.
-- Business rules update final ticket priority.
-- Approval request is created when required.
-- Notification records are created after workflow execution.
-
-External services may be mocked during integration tests.
-
----
-
-## API Tests
-
-API tests validate backend endpoints.
-
-Examples:
-
-- Health endpoint returns application status.
-- Jira webhook endpoint validates requests.
-- Ticket endpoints return expected data.
-- Approval endpoints update approval status.
-- Dashboard metrics endpoint returns summary data.
-
----
-
-## Manual Testing
-
-Manual testing will be used for end-to-end validation during Version 1.
-
-Examples:
-
-- Create a sample Jira ticket.
-- Verify webhook processing.
-- Confirm AI recommendation output.
-- Confirm Slack notification delivery.
-- Confirm email notification delivery.
-- Confirm dashboard updates.
-
----
-
-## Mocked External Services
-
-External services may be mocked during development and automated testing.
-
-Mock candidates:
-
-- OpenAI API
-- Slack API
-- Email provider
-- Jira API
-
-This reduces cost, avoids rate limits, and allows predictable test results.
+A real PostgreSQL database, not SQLite or mocks — self-provisioning (auto-creates itself if
+missing) with SAVEPOINT-based transactional isolation so each test starts clean even though
+the app code under test calls `session.commit()` internally. See `tests/conftest.py`.
 
 ---
 
 ## Testing Tools
 
-Version 1 may use:
+- pytest + pytest-cov
+- FastAPI `TestClient` (Starlette) for API tests
+- Real PostgreSQL (via Docker in CI, via a local/Docker Postgres instance for local runs)
+- `monkeypatch` for faking the Jira/Slack service singletons — no HTTP calls actually leave
+  the test process
 
-- Pytest for backend tests
-- FastAPI TestClient for API tests
-- React Testing Library for frontend tests
-- Docker Compose for local integration testing
+---
+
+## CI Integration
+
+Every push and pull request runs the full suite against an ephemeral Postgres service
+container in GitHub Actions (`.github/workflows/ci.yml`, `test` job), with coverage
+reported via `pytest --cov=app --cov-report=term-missing`.
 
 ---
 
 ## Testing Scope
 
-Version 1 testing includes:
+Included:
 
-- Backend unit tests
-- Backend API tests
-- Core workflow integration tests
-- Manual end-to-end workflow validation
+- Backend unit tests (Rule Engine)
+- Backend integration tests (webhook → workflow → Jira/Slack, against a real test DB)
+- Health/readiness endpoint tests
 
-Version 1 testing excludes:
+Excluded (not needed at this project's scale):
 
-- Large-scale load testing
-- Browser automation testing
-- Full performance testing
+- Load/performance testing
+- Browser/UI automation testing (the dashboard is server-rendered and low-interactivity)
 - Chaos testing
-- Security penetration testing
+- Security penetration testing (covered instead by `pip-audit` + gitleaks, see
+  [12-security-review.md](12-security-review.md))
 
 ---
 
 ## Design Decision
 
-Version 1 will focus on practical automated tests for backend workflow logic and API behavior, supported by manual end-to-end validation.
-
-This provides confidence in the most important system behavior without delaying delivery.
+Test against a real PostgreSQL database rather than mocking the ORM or using SQLite. This
+project is explicitly meant to demonstrate production-realistic engineering practices, and
+SQLite's behavior diverges from Postgres in ways (types, constraints, transaction
+semantics) that would make tests pass against a database the app doesn't actually run on in
+production. The one-time cost is a self-provisioning test database fixture; the payoff is
+tests that would actually catch a real Postgres-specific bug.

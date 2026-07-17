@@ -2,153 +2,98 @@
 
 ## Overview
 
-The AI IT Ticket Automation Platform must handle failures safely and predictably.
+The AI IT Ticket Automation Platform depends on external services — Jira, OpenAI, Slack,
+and PostgreSQL. Failures in any of them are expected, and the workflow needs to fail safely
+without corrupting state or losing visibility into what went wrong.
 
-Because the system depends on external services such as Jira, OpenAI, Slack, email, and PostgreSQL, failures are expected and must be handled without losing workflow visibility.
-
----
-
-## Error Handling Goals
-
-The system must:
-
-- Prevent one failed workflow from affecting other workflows.
-- Record all errors for troubleshooting.
-- Avoid exposing sensitive details to users.
-- Allow failed workflow steps to be retried when appropriate.
-- Preserve audit history even when failures occur.
+This document describes error handling as actually implemented.
 
 ---
 
-## Error Categories
+## What Actually Happens on Workflow Failure
+
+`workflow_service.py` wraps the entire webhook-triggered workflow (persist ticket → Rule
+Engine/AI classification → update Jira → notify Slack) in a single `try`/`except`. If
+anything in that chain raises:
+
+1. The exception is logged with `logger.exception(...)` (full traceback, application logs only).
+2. The `WorkflowRun` is marked `failed`, with `error_type` (the exception class name) and
+   `error_message` (`str(error)`) persisted on the row.
+3. An `AuditLog` entry records the failure with the same details.
+4. A best-effort Slack failure notification is sent.
+5. The exception is re-raised, which the global exception handler
+   (`api/app/core/error_handlers.py`) turns into a generic `500` response.
+
+This means every workflow failure — regardless of which step caused it — is fully
+traceable via the `WorkflowRun` row and its `AuditLog` entries, even though the API caller
+just sees a generic 500.
+
+---
 
 ## Validation Errors
 
-Validation errors occur when required data is missing or invalid.
+Handled separately, before a `WorkflowRun` is even created.
 
 Examples:
 
-- Missing Jira ticket ID
-- Invalid webhook payload
-- Missing reporter email
-- Unsupported event type
+- Unsupported Jira webhook event type
+- Malformed webhook payload
 
-Expected behavior:
-
-- Reject the request.
-- Return a clear error response.
-- Log the validation failure.
-- Do not start workflow execution.
+`app/services/jira_webhook_validation_service.py` checks these up front. FastAPI/Pydantic
+also reject malformed request bodies automatically via `422` responses before the route
+handler runs at all.
 
 ---
 
-## Integration Errors
+## Unhandled Exceptions (Any Route)
 
-Integration errors occur when an external service fails.
+`api/app/core/error_handlers.py` registers a catch-all handler for any exception FastAPI
+doesn't already handle (i.e. anything that isn't an `HTTPException` or a Pydantic
+validation error, both of which FastAPI handles on its own with proper status codes).
 
-Examples:
+Response shape:
 
-- Jira API unavailable
-- OpenAI API timeout
-- Slack API failure
-- Email delivery failure
+```json
+{
+  "detail": "Internal server error. Please try again or contact support."
+}
+```
 
-Expected behavior:
-
-- Record the failed integration event.
-- Mark the workflow step as failed.
-- Store the error details in audit logs.
-- Allow retry when appropriate.
-
----
-
-## Business Rule Errors
-
-Business rule errors occur when rules are invalid or cannot be evaluated.
-
-Examples:
-
-- Invalid rule condition
-- Missing rule action
-- Unsupported rule type
-
-Expected behavior:
-
-- Stop workflow execution.
-- Mark workflow as failed.
-- Log the rule evaluation error.
-- Notify administrators when appropriate.
+This matches the shape FastAPI already uses for `HTTPException` (`{"detail": "..."}`), so
+API consumers see one consistent error shape regardless of whether the error was an
+explicit `HTTPException` or an unexpected crash. No stack trace, SQL, or internal detail is
+ever included in the response — those go to the log via `logger.exception(...)`.
 
 ---
 
 ## Database Errors
 
-Database errors occur when the application cannot read or write required data.
+`GET /health/ready` specifically catches `SQLAlchemyError` when checking the database
+connection and returns a `503` with `{"status": "not_ready", "reason": "database_unavailable"}`
+rather than letting the readiness check itself crash.
 
-Examples:
-
-- Connection failure
-- Transaction failure
-- Constraint violation
-
-Expected behavior:
-
-- Roll back incomplete database transactions when possible.
-- Return a safe error response.
-- Log the failure.
-- Prevent partial workflow state when possible.
+Elsewhere, database errors during a workflow are caught by the top-level workflow
+`try`/`except` described above and handled the same as any other workflow failure.
 
 ---
 
-## AI Analysis Errors
+## Not Implemented
 
-AI analysis errors occur when ticket classification or recommendation fails.
-
-Examples:
-
-- OpenAI API timeout
-- Invalid AI response format
-- Missing classification result
-
-Expected behavior:
-
-- Record the AI failure.
-- Mark the workflow for manual review.
-- Continue only if a safe fallback exists.
-- Never allow AI failure to silently produce workflow decisions.
+- **Automatic retries.** A failed Jira update, OpenAI call, or Slack notification is not
+  retried — the workflow is marked failed and that's the end of that run. Retrying
+  external calls (with backoff) is a reasonable future improvement, tracked in
+  [project-roadmap.md](project-roadmap.md), but isn't built yet.
+- **Email notifications on failure.** Only Slack is notified. There is no email integration
+  in this project.
+- **Per-error-category response codes/bodies.** Every unhandled exception returns the same
+  generic `500` body regardless of whether it was a Jira timeout, an OpenAI error, or a bug
+  — the detail lives in the `WorkflowRun`/`AuditLog` rows, not in the HTTP response.
 
 ---
 
-## Retry Strategy
+## Design Decision
 
-The system may retry failed operations when the failure is likely temporary.
-
-Retry candidates:
-
-- Jira API calls
-- OpenAI API calls
-- Slack notifications
-- Email notifications
-
-Non-retry candidates:
-
-- Invalid webhook payloads
-- Invalid business rules
-- Authentication failures
-
----
-
-## User-Facing Error Responses
-
-API error responses should be consistent.
-
-Example:
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "INTEGRATION_ERROR",
-    "message": "An external integration failed."
-  }
-}
+Fail loud in the logs and the audit trail, fail generic in the API response. The operator
+debugging a failure has everything they need in `WorkflowRun.error_message` and the
+associated `AuditLog` entries; the API caller (Jira, or a dashboard user) only needs to
+know that something went wrong, not the internal cause.
