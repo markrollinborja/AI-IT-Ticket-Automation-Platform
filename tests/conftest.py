@@ -35,7 +35,7 @@ os.environ.setdefault("OPENAI_MODEL", "gpt-4o-mini")
 import psycopg2
 import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
@@ -93,11 +93,38 @@ def db_session(db_engine):
     A database session scoped to a single test, wrapped in a transaction
     that gets rolled back afterward. This is what keeps tests isolated
     from each other without needing to truncate tables between runs.
+
+    The tricky part: the app's own service layer calls `db.commit()` as
+    part of normal operation (see ticket_persistence_service,
+    workflow_run_service, audit_log_service). A plain "begin a
+    transaction, roll it back at the end" setup breaks the moment app
+    code commits, because that commit would end our outer transaction
+    early - there'd be nothing left to roll back, and test data would
+    leak into the test database permanently.
+
+    The fix is a nested SAVEPOINT: we open a real transaction, then a
+    SAVEPOINT inside it, and bind the session to that. When app code
+    calls `session.commit()`, SQLAlchemy only releases the SAVEPOINT -
+    the outer transaction is untouched. The event listener below opens a
+    fresh SAVEPOINT immediately after each one ends, so this keeps
+    working even if the code commits multiple times in one test (this
+    workflow commits at least three times: ticket persistence, workflow
+    run creation, and each status update). At teardown we roll back the
+    outer transaction, which discards every SAVEPOINT and every write
+    with it - regardless of how many inner commits happened.
     """
     connection = db_engine.connect()
     transaction = connection.begin()
     session_factory = sessionmaker(autocommit=False, autoflush=False, bind=connection)
     session = session_factory()
+
+    nested_savepoint = connection.begin_nested()
+
+    @event.listens_for(session, "after_transaction_end")
+    def _restart_savepoint(session, transaction_):
+        nonlocal nested_savepoint
+        if not nested_savepoint.is_active:
+            nested_savepoint = connection.begin_nested()
 
     yield session
 
@@ -124,3 +151,37 @@ def client(db_session):
         yield test_client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def mock_jira_and_slack(monkeypatch):
+    """
+    Replace the real Jira and Slack HTTP calls with no-op fakes that just
+    record what they were called with.
+
+    Why: jira_service and slack_notification_service are module-level
+    singletons (`jira_service = JiraService()`), so there's only ever one
+    instance in the whole app - patching a method directly on that
+    instance affects every module that imported it, including
+    workflow_service. Without this, tests would try to make real HTTP
+    calls using the fake test credentials from the top of this file and
+    fail with a connection or auth error instead of testing our own logic.
+    """
+    from types import SimpleNamespace
+
+    from app.services.jira_service import jira_service
+    from app.services.slack_notification_service import slack_notification_service
+
+    jira_calls = []
+    slack_messages = []
+
+    def fake_update_issue_priority(issue_key, priority):
+        jira_calls.append({"issue_key": issue_key, "priority": priority})
+
+    def fake_send_message(message):
+        slack_messages.append(message)
+
+    monkeypatch.setattr(jira_service, "update_issue_priority", fake_update_issue_priority)
+    monkeypatch.setattr(slack_notification_service, "send_message", fake_send_message)
+
+    return SimpleNamespace(jira_calls=jira_calls, slack_messages=slack_messages)
