@@ -117,17 +117,22 @@ The AI assists the automation workflow but is only used for ambiguous or unknown
 ## Step 7 — Human Approval (If Required)
 
 The Approval Policy Service evaluates ticket category against the ticket's title and
-description - independently of the Rule Engine/AI priority classification. See
-[project-decisions.md](project-decisions.md), Decision #9, for the full list of categories
-and why they're deliberately narrow.
+description - independently of the Rule Engine/AI priority classification. The design
+principle: approval blocks actions that are risky *and can wait*. It never blocks anything
+urgent, no matter how severe - an outage being Critical is exactly why it should NOT sit
+waiting on a human signature. See [project-decisions.md](project-decisions.md), Decision #9,
+for the full reasoning, including why executive-impact and outage gating were tried and
+removed.
 
-Examples that require approval:
+Categories that require approval:
 
-- Production or business-wide outages
 - Security-sensitive changes (firewall/network configuration)
 - Financial or payroll system access
-- Executive-impact requests
 - Software purchases
+
+Outages, executive-impact requests, and anything else are classified and processed
+immediately, with no gate - notification (Slack) still happens, but it doesn't block
+anything.
 
 If approval is required, this is a real pause, not just a flag:
 

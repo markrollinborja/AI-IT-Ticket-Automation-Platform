@@ -189,19 +189,29 @@ def client_allowing_server_errors(db_session):
 @pytest.fixture()
 def mock_jira_and_slack(monkeypatch):
     """
-    Replace the real Jira and Slack HTTP calls with no-op fakes that just
-    record what they were called with.
+    Replace the real Jira, Slack, and OpenAI calls with no-op fakes.
+    Jira/Slack calls are recorded; AI classification returns a fixed
+    result.
 
-    Why: jira_service and slack_notification_service are module-level
-    singletons (`jira_service = JiraService()`), so there's only ever one
-    instance in the whole app - patching a method directly on that
-    instance affects every module that imported it, including
+    Why: jira_service, slack_notification_service, and
+    ai_classification_service are module-level singletons, so there's only
+    ever one instance in the whole app - patching a method directly on
+    that instance affects every module that imported it, including
     workflow_service. Without this, tests would try to make real HTTP
     calls using the fake test credentials from the top of this file and
     fail with a connection or auth error instead of testing our own logic.
+
+    The AI mock matters for approval-category tickets specifically: none
+    of the three approval categories (security-sensitive change,
+    financial/payroll access, software purchase) overlap with any Rule
+    Engine pattern, so any ticket written to trigger approval falls
+    through to AI classification. Without this mock, those tests would
+    attempt a real OpenAI call using the dummy OPENAI_API_KEY above.
     """
     from types import SimpleNamespace
 
+    from app.schemas.ticket import TicketPriority
+    from app.services.ai_classification_service import AIClassificationResult, ai_classification_service
     from app.services.jira_service import jira_service
     from app.services.slack_notification_service import slack_notification_service
 
@@ -217,6 +227,10 @@ def mock_jira_and_slack(monkeypatch):
     def fake_send_message(message):
         slack_messages.append(message)
 
+    def fake_classify_ticket(ticket):
+        return AIClassificationResult(recommended_priority=TicketPriority.HIGH, confidence=0.9)
+
+    monkeypatch.setattr(ai_classification_service, "classify_ticket", fake_classify_ticket)
     monkeypatch.setattr(jira_service, "update_issue_priority", fake_update_issue_priority)
     monkeypatch.setattr(jira_service, "set_issue_priority_name", fake_set_issue_priority_name)
     monkeypatch.setattr(slack_notification_service, "send_message", fake_send_message)

@@ -116,9 +116,11 @@ out separately rather than blending it into the engineering-practices list above
 
 - `approvals` table and `Approval` model tracking the human decision (`pending`/`approved`/
   `rejected`), independent of `workflow_runs`
-- Approval Policy Service rewritten to evaluate ticket category (outage, security-sensitive
-  change, financial/payroll access, executive impact, software purchase) instead of just
-  checking if the reporter's name matched a hardcoded executive list
+- Approval Policy Service rewritten to evaluate ticket category (security-sensitive change,
+  financial/payroll access, software purchase) instead of reporter identity. Outages and
+  executive-impact requests were tried as gated categories and deliberately removed -
+  approval only makes sense for risk that can wait, and urgency should never be gated. See
+  [project-decisions.md](project-decisions.md), Decision #9
 - A real pause, not just a database flag: Jira's priority is set to a **Pending**
   workflow-state value immediately, and the workflow genuinely stops - the real classified
   priority is not pushed to Jira and the workflow does not complete until a decision is made

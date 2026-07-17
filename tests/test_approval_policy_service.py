@@ -2,50 +2,34 @@
 Unit tests for the Approval Policy Service.
 
 Same philosophy as test_rule_engine.py: pure text-matching logic, no
-database or network involved, so these are cheap and fast. Each case below
-maps to one of the real-world examples the approval categories were
-designed around (production outage, security-sensitive change, financial
-access, executive impact, software spend) plus the routine tickets that
-should NOT require approval.
+database or network involved, so these are cheap and fast.
+
+The design principle under test: approval blocks actions that are risky
+*and can wait* (security-sensitive changes, financial/payroll access,
+software purchases) - it never blocks anything urgent, no matter how
+severe. That's why "production outage" and "executive-impact" cases
+appear in NO_APPROVAL_CASES below, not REQUIRES_APPROVAL_CASES - an
+earlier version of this service gated both, and that was a mistake: an
+outage being Critical is exactly why it shouldn't wait on a human
+signature. See project-decisions.md, Decision #9.
 """
 
 import pytest
 from app.services.approval_policy_service import approval_policy_service
 
-# Each case: (reporter, title, description, expected_required)
+# Each case: (title, description)
 REQUIRES_APPROVAL_CASES = [
     pytest.param(
-        "Jane Doe",
-        "Production website is down",
-        "Customers cannot place orders",
-        id="production_outage",
-    ),
-    pytest.param(
-        "Jane Doe",
         "Open port 3389 on the production firewall",
         "Need RDP access for a vendor",
         id="firewall_change",
     ),
     pytest.param(
-        "Jane Doe",
         "Give John access to payroll",
         "He's covering for the payroll admin this week",
         id="payroll_access",
     ),
     pytest.param(
-        "IT Help Desk",
-        "CEO laptop won't boot",
-        "Needs a replacement as soon as possible",
-        id="executive_equipment_via_text",
-    ),
-    pytest.param(
-        "CEO",
-        "Need a new monitor",
-        "Requesting a replacement monitor for my desk",
-        id="executive_reporter",
-    ),
-    pytest.param(
-        "Jane Doe",
         "Need Adobe Photoshop license",
         "For the new design hire",
         id="software_purchase",
@@ -53,39 +37,45 @@ REQUIRES_APPROVAL_CASES = [
 ]
 
 
-@pytest.mark.parametrize("reporter, title, description", REQUIRES_APPROVAL_CASES)
-def test_approval_required_for_risky_categories(reporter, title, description):
-    result = approval_policy_service.evaluate(reporter=reporter, title=title, description=description)
+@pytest.mark.parametrize("title, description", REQUIRES_APPROVAL_CASES)
+def test_approval_required_for_risky_categories(title, description):
+    result = approval_policy_service.evaluate(title=title, description=description)
 
     assert result.approval_required is True
     assert result.reason  # every approval-required result should explain why
 
 
 NO_APPROVAL_CASES = [
+    pytest.param("Forgot my password", "Need help resetting access to my account", id="password_reset"),
+    pytest.param("Can't connect to VPN", "Getting a timeout from home", id="vpn_connectivity"),
     pytest.param(
-        "Jane Doe", "Forgot my password", "Need help resetting access to my account", id="password_reset"
+        "Production website is down",
+        "Customers cannot place orders",
+        id="production_outage_is_urgent_not_gated",
     ),
-    pytest.param("Jane Doe", "Can't connect to VPN", "Getting a timeout from home", id="vpn_connectivity"),
+    pytest.param(
+        "CEO laptop won't boot",
+        "Needs a replacement as soon as possible",
+        id="executive_impact_is_not_gated",
+    ),
 ]
 
 
-@pytest.mark.parametrize("reporter, title, description", NO_APPROVAL_CASES)
-def test_no_approval_required_for_routine_tickets(reporter, title, description):
-    result = approval_policy_service.evaluate(reporter=reporter, title=title, description=description)
+@pytest.mark.parametrize("title, description", NO_APPROVAL_CASES)
+def test_no_approval_required_for_routine_or_urgent_tickets(title, description):
+    result = approval_policy_service.evaluate(title=title, description=description)
 
     assert result.approval_required is False
 
 
 def test_approval_policy_avoids_common_word_false_positive():
     """
-    'port' is a substring of 'support', and 'cto' is a substring of
-    'doctor'. A naive bare-keyword match would wrongly flag routine tickets
-    that happen to contain these words.
+    'port' is a substring of 'support'. A naive bare-keyword match would
+    wrongly flag routine tickets that happen to contain that word.
     """
     result = approval_policy_service.evaluate(
-        reporter="Jane Doe",
         title="Need IT support",
-        description="My doctor's office portal won't load on the guest wifi",
+        description="My office portal won't load on the guest wifi",
     )
 
     assert result.approval_required is False

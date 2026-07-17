@@ -60,12 +60,53 @@ def test_webhook_classifies_via_rule_engine_and_completes_workflow(client, db_se
     assert workflow_run.final_priority == "low"
 
 
-def test_webhook_requires_approval_for_executive_reporter(client, db_session, mock_jira_and_slack):
+def test_webhook_completes_critical_outage_without_approval_gate(client, db_session, mock_jira_and_slack):
+    """
+    A Critical outage must NOT be gated - see the design principle in
+    approval_policy_service.py's docstring and Decision #9. This is the
+    behavior the earlier version of this service got backwards: it gated
+    outages, which is exactly the wrong call. Urgent tickets get the real
+    priority pushed to Jira immediately, no pause.
+    """
+    payload = jira_webhook_payload(
+        key="IT-105",
+        summary="Production website is down",
+        description="Customers cannot place orders",
+        reporter="Jane Doe",
+    )
+
+    response = client.post("/webhooks/jira", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["priority"] == "critical"
+
+    assert len(mock_jira_and_slack.jira_calls) == 1
+    assert mock_jira_and_slack.jira_calls[0]["priority"].value == "critical"
+    assert "priority_name" not in mock_jira_and_slack.jira_calls[0]
+
+    workflow_run = db_session.query(WorkflowRun).join(Ticket).filter(Ticket.jira_issue_key == "IT-105").one()
+    assert workflow_run.status == "completed"
+    assert workflow_run.approval_required is False
+
+
+def test_webhook_requires_approval_for_financial_access_request(client, db_session, mock_jira_and_slack):
+    """
+    Payroll/financial access is one of the three categories that still
+    requires approval - unlike an executive-impact or outage ticket (see
+    test_approval_policy_service.py), this one genuinely can wait for a
+    human decision without costing anything, which is the whole point.
+
+    This ticket doesn't match any Rule Engine pattern, so classification
+    falls through to AI - mock_jira_and_slack mocks that too, returning a
+    fixed "high" result (see conftest.py).
+    """
     payload = jira_webhook_payload(
         key="IT-102",
-        summary="Need a new monitor",
-        description="Requesting a replacement monitor for my desk",
-        reporter="CEO",
+        summary="Give John access to payroll",
+        description="He's covering for the payroll admin this week",
+        reporter="Jane Doe",
     )
 
     response = client.post("/webhooks/jira", json=payload)
@@ -74,7 +115,7 @@ def test_webhook_requires_approval_for_executive_reporter(client, db_session, mo
     body = response.json()
     assert body["status"] == "pending_approval"
     assert body["approval_required"] is True
-    assert body["classified_priority"] == "low"
+    assert body["classified_priority"] == "high"
 
     # Classification still runs before the approval gate (so whoever
     # approves this can see what priority it was assigned), and Jira gets
@@ -89,7 +130,8 @@ def test_webhook_requires_approval_for_executive_reporter(client, db_session, mo
     workflow_run = db_session.query(WorkflowRun).join(Ticket).filter(Ticket.jira_issue_key == "IT-102").one()
     assert workflow_run.status == "pending_approval"
     assert workflow_run.approval_required is True
-    assert workflow_run.final_priority == "low"
+    assert workflow_run.final_priority == "high"
+    assert workflow_run.final_category == "ai"
 
 
 def test_webhook_rejects_unsupported_event_type(client, mock_jira_and_slack):

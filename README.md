@@ -219,8 +219,10 @@ After processing completes, the platform sends a formatted Slack notification co
 
 ### Approval Workflow
 
-- Category-based approval gate (outage, security-sensitive change, financial/payroll
-  access, executive impact, software purchase) - independent of the priority classification
+- Category-based approval gate (security-sensitive change, financial/payroll access,
+  software purchase) - independent of the priority classification. Urgent tickets (outages,
+  executive-impact requests) are never gated, no matter how severe - see
+  [project-decisions.md](docs/project-decisions.md), Decision #9
 - A real pause: Jira is set to a **Pending** priority immediately, and the workflow does not
   complete until a human approves or rejects it via the API or the dashboard
 - Dashboard "Pending Approvals" section with Approve/Reject actions

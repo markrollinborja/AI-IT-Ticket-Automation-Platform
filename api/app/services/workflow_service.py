@@ -103,7 +103,6 @@ class WorkflowService:
             logger.info("Ticket classified with priority %s", processed_ticket.priority.value)
 
             approval_result = approval_policy_service.evaluate(
-                reporter=persisted_ticket.reporter,
                 title=persisted_ticket.title,
                 description=persisted_ticket.description,
             )

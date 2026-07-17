@@ -13,69 +13,30 @@ class ApprovalPolicyService:
     Determines whether a ticket needs human approval before the workflow is
     allowed to finalize (update Jira, send the completion notification).
 
-    This is a risk check, not a classification - it runs independently of
-    the Rule Engine / AI priority classification. Deterministic keyword
-    matching over the ticket title/description, same approach as
-    RuleEngine, kept intentionally simple: a handful of categories where
-    letting automation act unsupervised is a real business risk, not an
-    attempt at a full enterprise approval-routing matrix.
+    Design principle: approval blocks actions that are risky *and can
+    wait* - never anything urgent. An incident being Critical is exactly
+    why it should NOT be gated: the whole value of a fast priority
+    classification is a fast response, and holding it for a human
+    signature works against that. Gating only makes sense where waiting
+    doesn't cost anything real - changing security posture or spending
+    company money can sit for an hour without harm, so a human should
+    sign off before automation acts.
+
+    This mirrors how real IT service management works: incident response
+    gets an expedited path (ITIL's "emergency change"), while security and
+    financial changes go through normal approval. Earlier versions of this
+    service also gated executive-impact requests and outages - both were
+    reconsidered and removed for exactly this reason: identity and urgency
+    aren't good approval signals, risk-that-can-wait is.
+
+    Deterministic keyword matching over the ticket title/description, same
+    approach as RuleEngine, kept intentionally simple: a handful of
+    categories, not an attempt at a full enterprise approval-routing
+    matrix. See project-decisions.md, Decision #9.
     """
 
-    EXECUTIVE_REPORTERS = {
-        "CEO",
-        "CIO",
-        "CTO",
-        "Chief Executive Officer",
-    }
-
-    def evaluate(self, reporter: str, title: str, description: str) -> ApprovalPolicyResult:
+    def evaluate(self, title: str, description: str) -> ApprovalPolicyResult:
         text = f"{title} {description}".lower()
-
-        # Executive-impact: either the reporter *is* an executive, or the
-        # ticket is filed on someone's behalf (e.g. IT desk logging "CEO
-        # laptop won't boot"). Deliberately avoids bare "cio"/"cto" text
-        # matching - those are short enough to collide with ordinary words
-        # (e.g. "cto" is a substring of "doctor").
-        if reporter in self.EXECUTIVE_REPORTERS or self._contains_any(
-            text,
-            [
-                "ceo",
-                "chief executive officer",
-                "chief information officer",
-                "chief technology officer",
-                "executive laptop",
-                "executive equipment",
-            ],
-        ):
-            return ApprovalPolicyResult(
-                approval_required=True,
-                reason="Executive-impact request requires manager approval and asset tracking.",
-            )
-
-        # Production / business-wide outage: the fix itself may be
-        # low-risk, but the response (emergency maintenance, overtime,
-        # company-wide comms) is a business decision, not a technical one.
-        if self._contains_any(
-            text,
-            [
-                "production website",
-                "prod website",
-                "customer portal",
-                "public website",
-                "company-wide",
-                "entire company",
-            ],
-        ) and self._contains_any(
-            text,
-            ["down", "outage", "unavailable", "cannot access", "unable to access"],
-        ):
-            return ApprovalPolicyResult(
-                approval_required=True,
-                reason=(
-                    "Production or business-wide outage may trigger emergency maintenance, "
-                    "overtime, or company-wide communication - requires manager awareness."
-                ),
-            )
 
         # Security-sensitive configuration changes. Deliberately avoids a
         # bare "port" keyword - it's a substring of common words like

@@ -29,25 +29,27 @@ def jira_webhook_payload(key: str, summary: str, description: str, reporter: str
 
 def _create_gated_workflow_run(client, key: str) -> str:
     """
-    Files a ticket that requires approval and returns its workflow_run_id.
+    Files a ticket that requires approval (a security-sensitive firewall
+    change) and returns its workflow_run_id.
 
-    Deliberately uses text that matches a Rule Engine pattern
-    (critical_customer_facing_outage), not just an approval category - if
-    it fell through to AI classification, these tests would attempt a real
-    OpenAI call, since ai_classification_service isn't mocked anywhere in
-    conftest.py (only jira_service and slack_notification_service are).
+    This text doesn't match any Rule Engine pattern, so classification
+    falls through to AI - mock_jira_and_slack mocks that too, returning a
+    fixed "high" result (see conftest.py). An outage ticket would be the
+    wrong choice here on purpose: outages are urgent and must NOT be
+    gated, see test_webhook_completes_critical_outage_without_approval_gate
+    in test_webhook_jira.py.
     """
     payload = jira_webhook_payload(
         key=key,
-        summary="Production website is down",
-        description="Customers cannot place orders",
+        summary="Open port 3389 on the production firewall",
+        description="Need RDP access for a vendor",
         reporter="Jane Doe",
     )
 
     response = client.post("/webhooks/jira", json=payload)
     assert response.status_code == 200
     assert response.json()["status"] == "pending_approval"
-    assert response.json()["classified_priority"] == "critical"
+    assert response.json()["classified_priority"] == "high"
 
     return response.json()["jira_issue_key"]
 
