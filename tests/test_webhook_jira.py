@@ -74,16 +74,22 @@ def test_webhook_requires_approval_for_executive_reporter(client, db_session, mo
     body = response.json()
     assert body["status"] == "pending_approval"
     assert body["approval_required"] is True
+    assert body["classified_priority"] == "low"
 
-    # The approval policy short-circuits the workflow before classification
-    # runs, so Jira should never be touched here - only the Slack
-    # "approval required" notification goes out.
-    assert len(mock_jira_and_slack.jira_calls) == 0
+    # Classification still runs before the approval gate (so whoever
+    # approves this can see what priority it was assigned), and Jira gets
+    # updated to the "Pending" workflow-state priority immediately - it
+    # does NOT get the real classified priority yet, and the workflow does
+    # not complete until someone approves or rejects it.
+    assert len(mock_jira_and_slack.jira_calls) == 1
+    assert mock_jira_and_slack.jira_calls[0]["issue_key"] == "IT-102"
+    assert mock_jira_and_slack.jira_calls[0]["priority_name"] == "Pending"
     assert len(mock_jira_and_slack.slack_messages) == 1
 
     workflow_run = db_session.query(WorkflowRun).join(Ticket).filter(Ticket.jira_issue_key == "IT-102").one()
     assert workflow_run.status == "pending_approval"
     assert workflow_run.approval_required is True
+    assert workflow_run.final_priority == "low"
 
 
 def test_webhook_rejects_unsupported_event_type(client, mock_jira_and_slack):

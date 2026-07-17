@@ -53,7 +53,7 @@ Tracks each automation workflow run for a ticket.
 |--------|------|-------------|
 | id | UUID | Primary key |
 | ticket_id | UUID | Foreign key → `tickets.id` |
-| status | VARCHAR(50) | `processing`, `completed`, `failed` |
+| status | VARCHAR(50) | `processing`, `pending_approval`, `completed`, `rejected`, `failed` |
 | ai_category | VARCHAR(100) | Reserved for future AI category classification (not populated in V1/V2 — see [16-ai-classification-strategy.md](16-ai-classification-strategy.md)) |
 | ai_priority | VARCHAR(50) | AI-recommended priority, when the Rule Engine had no match |
 | ai_support_team | VARCHAR(100) | Reserved for future AI support-team recommendation (not populated) |
@@ -94,6 +94,28 @@ Stores the workflow audit trail.
 
 ---
 
+## 4. approvals
+
+Tracks the human decision for a workflow run that was gated for approval. Created only when
+the Approval Policy Service determines a ticket needs sign-off - see
+[project-decisions.md](project-decisions.md), Decision #9.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| workflow_run_id | UUID | Foreign key → `workflow_runs.id`, unique (one approval per workflow run) |
+| status | VARCHAR(20) | `pending`, `approved`, `rejected` |
+| decided_by | VARCHAR(255) | Self-reported name/email of whoever decided - not a verified identity, see [09-authentication-strategy.md](09-authentication-strategy.md) |
+| decision_notes | TEXT | Optional free-text notes from the decision |
+| requested_at | TIMESTAMPTZ | When the approval was created (workflow gate time) |
+| decided_at | TIMESTAMPTZ | When approved or rejected |
+
+`approval_reason` (why approval was required) lives on `workflow_runs`, not here - it's set
+at gate time and doesn't change based on the decision, so duplicating it on `approvals`
+would just be redundant.
+
+---
+
 ## Entity Relationships
 
 ```text
@@ -101,11 +123,13 @@ tickets
    │
    └── workflow_runs
             │
-            └── audit_logs
+            ├── audit_logs
+            └── approvals (0 or 1 - only if approval was required)
 ```
 
 One ticket can have multiple workflow runs (e.g. if Jira resends a webhook). One workflow
-run can have multiple audit log entries recorded as it progresses.
+run can have multiple audit log entries recorded as it progresses, and at most one
+`approvals` row.
 
 ---
 
@@ -134,10 +158,6 @@ a full timeline per workflow run without overloading the `workflow_runs` row its
 The following were part of earlier planning but are **not** in the current schema. They are
 listed here so this document doesn't silently disagree with the code:
 
-- **`approvals` table** — there is no separate approval request/decision entity.
-  `workflow_runs.approval_required` and `approval_reason` are the entire extent of the
-  approval feature: a boolean gate with a reason, evaluated at workflow time. There's no
-  approve/reject action or approver identity tracked.
 - **`notifications` table** — Slack messages are sent directly by
   `slack_notification_service` and are not persisted as their own record. Whether a
   notification was sent is only visible in the `audit_logs` entries for that workflow run.

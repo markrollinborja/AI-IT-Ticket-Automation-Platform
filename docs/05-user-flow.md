@@ -116,40 +116,45 @@ The AI assists the automation workflow but is only used for ambiguous or unknown
 
 ## Step 7 — Human Approval (If Required)
 
-Business policies determine whether human approval is required.
+The Approval Policy Service evaluates ticket category against the ticket's title and
+description - independently of the Rule Engine/AI priority classification. See
+[project-decisions.md](project-decisions.md), Decision #9, for the full list of categories
+and why they're deliberately narrow.
 
-Examples include:
+Examples that require approval:
 
-- Executive user requests
-- Security-related incidents
-- High-risk automation actions
+- Production or business-wide outages
+- Security-sensitive changes (firewall/network configuration)
+- Financial or payroll system access
+- Executive-impact requests
+- Software purchases
 
-If approval is required:
+If approval is required, this is a real pause, not just a flag:
 
-- An approval request is generated.
-- Stakeholders are notified.
-- Workflow execution pauses until a decision is received.
+- An `Approval` row is created (`pending`).
+- The `WorkflowRun` status becomes `pending_approval`.
+- Jira's priority is immediately set to a **Pending** workflow-state value (not the
+  classified priority) so the ticket visibly reflects "awaiting approval" in Jira itself.
+- A Slack notification goes out with the classified priority and the reason approval is
+  required.
+- Workflow execution genuinely stops here - Jira does **not** get the real classified
+  priority, and the workflow does not complete, until a decision is made via
+  `POST /workflow-runs/{id}/approve` or `/reject` (see
+  [08-api-design.md](08-api-design.md)).
 
-Otherwise, processing continues automatically.
+Approving resumes the workflow: Jira gets the real classified priority, and the workflow
+completes normally. Rejecting sets Jira's priority to a **Rejected** workflow-state value
+and the workflow ends there permanently - it does not retry or continue.
+
+Otherwise (no approval required), processing continues automatically.
 
 ---
 
 ## Step 8 — Notifications
 
-The platform sends workflow notifications based on the final workflow outcome.
-
-Notification channels may include:
-
-- Slack
-- Email
-
-Notifications may include:
-
-- Assigned support team
-- Priority changes
-- Approval requests
-- Workflow completion
-- Processing failures
+The platform sends Slack notifications at each meaningful workflow transition: approval
+required, workflow completed, approval rejected, and processing failed. There is no email
+integration in this project - see [12-security-review.md](12-security-review.md).
 
 ---
 

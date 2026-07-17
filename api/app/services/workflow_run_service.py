@@ -29,10 +29,35 @@ class WorkflowRunService:
         db: Session,
         workflow_run: WorkflowRun,
         approval_reason: str,
+        final_priority: TicketPriority,
+        classification_source: str,
+        ai_priority: TicketPriority | None = None,
+        ai_confidence_score: float | None = None,
     ) -> WorkflowRun:
         workflow_run.status = "pending_approval"
         workflow_run.approval_required = True
         workflow_run.approval_reason = approval_reason
+        workflow_run.final_priority = final_priority.value
+        workflow_run.final_category = classification_source
+
+        if ai_priority is not None:
+            workflow_run.ai_priority = ai_priority.value
+
+        if ai_confidence_score is not None:
+            workflow_run.ai_confidence_score = ai_confidence_score
+
+        db.commit()
+        db.refresh(workflow_run)
+
+        return workflow_run
+
+    def mark_rejected(
+        self,
+        db: Session,
+        workflow_run: WorkflowRun,
+    ) -> WorkflowRun:
+        workflow_run.status = "rejected"
+        workflow_run.completed_at = datetime.now(UTC)
 
         db.commit()
         db.refresh(workflow_run)

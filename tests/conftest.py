@@ -39,6 +39,7 @@ from app.db.base import Base
 # Importing these registers every table on Base.metadata. Without this,
 # Base.metadata.create_all() below would create zero tables - SQLAlchemy
 # only knows about a model once its module has been imported somewhere.
+from app.models.approval import Approval  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.ticket import Ticket  # noqa: F401
 from app.models.workflow_run import WorkflowRun  # noqa: F401
@@ -210,10 +211,14 @@ def mock_jira_and_slack(monkeypatch):
     def fake_update_issue_priority(issue_key, priority):
         jira_calls.append({"issue_key": issue_key, "priority": priority})
 
+    def fake_set_issue_priority_name(issue_key, priority_name):
+        jira_calls.append({"issue_key": issue_key, "priority_name": priority_name})
+
     def fake_send_message(message):
         slack_messages.append(message)
 
     monkeypatch.setattr(jira_service, "update_issue_priority", fake_update_issue_priority)
+    monkeypatch.setattr(jira_service, "set_issue_priority_name", fake_set_issue_priority_name)
     monkeypatch.setattr(slack_notification_service, "send_message", fake_send_message)
 
     return SimpleNamespace(jira_calls=jira_calls, slack_messages=slack_messages)

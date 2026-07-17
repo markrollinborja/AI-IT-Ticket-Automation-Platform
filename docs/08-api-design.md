@@ -81,6 +81,20 @@ Returns a single workflow execution's full detail.
 
 Returns the audit log entries for a single workflow execution, in chronological order.
 
+### POST /workflow-runs/{workflow_run_id}/approve
+
+Resumes a workflow run that's `pending_approval`: pushes the real classified priority to
+Jira and marks the workflow completed. Body: `{"decided_by": str, "decision_notes": str | None}`.
+Returns `404` if the workflow run doesn't exist, `409` if it isn't currently
+`pending_approval`. See [05-user-flow.md](05-user-flow.md), Step 7, and
+[project-decisions.md](project-decisions.md), Decision #9.
+
+### POST /workflow-runs/{workflow_run_id}/reject
+
+Marks a `pending_approval` workflow run `rejected` and sets Jira's priority to a
+**Rejected** workflow-state value. Same request body and error codes as `/approve`. This is
+terminal - a rejected workflow run does not retry or resume.
+
 ---
 
 ## Dashboard
@@ -143,5 +157,3 @@ is in the database, not the HTTP response.
 - No category prediction, support team recommendation, or suggested-response endpoints —
   AI is scoped to priority classification only (see
   [16-ai-classification-strategy.md](16-ai-classification-strategy.md))
-- No approval decision endpoints — `approval_required` is a boolean gate evaluated during
-  the workflow, not a separate approve/reject action

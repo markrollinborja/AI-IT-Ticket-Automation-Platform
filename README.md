@@ -217,6 +217,14 @@ After processing completes, the platform sends a formatted Slack notification co
 - Automatic Jira priority updates
 - Slack workflow notifications
 
+### Approval Workflow
+
+- Category-based approval gate (outage, security-sensitive change, financial/payroll
+  access, executive impact, software purchase) - independent of the priority classification
+- A real pause: Jira is set to a **Pending** priority immediately, and the workflow does not
+  complete until a human approves or rejects it via the API or the dashboard
+- Dashboard "Pending Approvals" section with Approve/Reject actions
+
 ### Monitoring
 
 - Dashboard for monitoring workflow runs
@@ -225,30 +233,32 @@ After processing completes, the platform sends a formatted Slack notification co
 ### Infrastructure
 
 - Dockerized local development environment
+- GitHub Actions CI (lint, test, dependency security scan) on every push and PR
+- Pre-commit hooks (Ruff, gitleaks) and Dependabot
 
 ---
 
 ## Project Status
 
-**Version:** 1.0 MVP
+Both Version 1 (core platform) and Version 2 (engineering practices: automated testing,
+CI/CD, security scanning, health/readiness checks, Docker hardening) are complete, plus the
+approval workflow described above. See [docs/project-roadmap.md](docs/project-roadmap.md)
+for the full breakdown and what's next.
 
 ### Completed
 
 - Jira Cloud webhook integration
-- Rule Engine priority classification
-- OpenAI fallback priority classification
-- Workflow tracking
-- Audit logging
+- Rule Engine + OpenAI fallback priority classification
+- Category-based approval workflow with a real pause and Jira status sync
+- Workflow tracking and audit logging
 - Slack notifications
-- Dashboard
-- Dockerized local development
+- Dashboard, including Pending Approvals
+- pytest suite + CI (GitHub Actions) + pre-commit hooks + dependency scanning
+- Dockerized local development with health/readiness checks
 
-### Planned for Version 2
+### Next
 
-- Category classification
-- Support team recommendation
-- Suggested responses
-- Approval workflows
+- Public deployment (see the roadmap doc)
 
 ---
 
@@ -256,14 +266,16 @@ After processing completes, the platform sends a formatted Slack notification co
 
 1. Jira receives a new IT support ticket.
 2. Jira sends a webhook to the FastAPI application.
-3. The ticket is persisted in PostgreSQL.
-4. A WorkflowRun is created to track execution.
-5. The approval policy is evaluated.
-6. The Rule Engine attempts to classify the ticket priority.
-7. If no rule matches, OpenAI classifies the priority.
-8. The final priority is written back to Jira.
-9. Audit logs are recorded throughout the workflow.
-10. Slack is notified and the workflow is marked complete.
+3. The ticket is persisted in PostgreSQL, and a WorkflowRun is created to track execution.
+4. The Rule Engine attempts to classify the ticket priority; if no rule matches, OpenAI
+   classifies it instead.
+5. The approval policy evaluates the ticket's category (independent of its priority).
+6. If approval is required: Jira's priority is set to **Pending**, a Slack notification goes
+   out, and the workflow stops - the real priority is not written to Jira and the workflow
+   is not complete until a human approves or rejects it.
+7. If no approval is required: the classified priority is written to Jira immediately.
+8. Audit logs are recorded throughout the workflow, and Slack is notified on completion,
+   rejection, or failure.
 
 ---
 

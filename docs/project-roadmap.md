@@ -108,6 +108,27 @@ Both are feature-complete as of this writing.
   `docs/12-security-review.md` corrected to match the real implementation
 - `docs/project-decisions.md` gained Decision #8 documenting the frontend scope-down
 
+## Approval Workflow (Business Feature)
+
+This one's a genuine exception to "Version 2 is engineering practices, not new business
+features" - it's real new functionality, added after Version 2 was underway. Worth calling
+out separately rather than blending it into the engineering-practices list above.
+
+- `approvals` table and `Approval` model tracking the human decision (`pending`/`approved`/
+  `rejected`), independent of `workflow_runs`
+- Approval Policy Service rewritten to evaluate ticket category (outage, security-sensitive
+  change, financial/payroll access, executive impact, software purchase) instead of just
+  checking if the reporter's name matched a hardcoded executive list
+- A real pause, not just a database flag: Jira's priority is set to a **Pending**
+  workflow-state value immediately, and the workflow genuinely stops - the real classified
+  priority is not pushed to Jira and the workflow does not complete until a decision is made
+- `POST /workflow-runs/{id}/approve` and `/reject` resume or terminate the paused workflow;
+  rejecting pushes a **Rejected** workflow-state value to Jira
+- Dashboard gained a Pending Approvals section with Approve/Reject actions (a small modal +
+  `fetch()` call, not a separate frontend - consistent with Decision #8)
+- See [project-decisions.md](project-decisions.md), Decision #9, for the full reasoning,
+  and [05-user-flow.md](05-user-flow.md), Step 7, for the user-facing behavior
+
 ---
 
 # In Progress
@@ -145,9 +166,10 @@ complexity:
 
 ## Workflow
 
-- Human approval decision tracking (currently a boolean gate only, no approve/reject
-  workflow or approver identity)
 - Workflow retry policies for failed steps
+- Configurable business rules (move `rule_engine.py`'s hardcoded conditions into a database
+  table so they can change without a redeploy) - discussed alongside the approval workflow,
+  deferred for now
 
 ## Platform
 
@@ -172,5 +194,7 @@ Once public deployment is complete:
 - LinkedIn project description
 - Interview talking points and STAR stories for the Version 2 engineering work (testing
   strategy, CI/CD, the transactional test isolation bug, the tzdata production bug caught
-  by tests, the TestClient `raise_server_exceptions` quirk)
+  by tests, the TestClient `raise_server_exceptions` quirk) and the approval workflow
+  (resumable workflow state, Jira-as-status-indicator, the deliberate choice not to build
+  department-based approver routing)
 - Demo script

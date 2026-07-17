@@ -15,7 +15,8 @@ from app.db.session import engine
 # Imported for their side effect: registering each model's table on
 # Base.metadata so create_all() below knows about them. Don't remove
 # these even though nothing in this file calls Ticket/WorkflowRun/
-# AuditLog directly - doing so would silently stop creating their tables.
+# AuditLog/Approval directly - doing so would silently stop creating their tables.
+from app.models.approval import Approval  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.ticket import Ticket  # noqa: F401
 from app.models.workflow_run import WorkflowRun  # noqa: F401
