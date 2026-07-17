@@ -1,8 +1,8 @@
 # AI IT Ticket Automation Platform
 
 ![CI](https://github.com/markrollinborja/AI-IT-Ticket-Automation-Platform/actions/workflows/ci.yml/badge.svg)
-![Python](https://img.shields.io/badge/Python-3.12-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
+![Python](https://img.shields.io/badge/Python-3.13-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.139-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED)
 ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-black)
@@ -119,7 +119,7 @@ After processing completes, the platform sends a formatted Slack notification co
 
 ### Backend
 
-- Python 3.12
+- Python 3.13
 - FastAPI
 - SQLAlchemy
 - PostgreSQL
