@@ -18,6 +18,56 @@ This project demonstrates enterprise workflow automation using modern backend en
 
 ---
 
+## Getting Started
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (recommended), **or** Python 3.13 with a local PostgreSQL 16 instance
+- A Jira Cloud site, a Slack incoming webhook, and an OpenAI API key, if you want the real integrations to run end-to-end. Without them, the app still boots and the dashboard/API work locally - only the actual outbound Jira/Slack/OpenAI calls will fail.
+
+### 1. Configure environment variables
+
+```bash
+cp api/.env.example api/.env
+```
+
+Fill in `api/.env` with your own values. See [`api/.env.example`](api/.env.example) for the full list of required variables.
+
+### 2. Run it
+
+**Option A - Docker Compose (recommended):**
+
+```bash
+docker compose up -d --build
+```
+
+This builds the API image, starts PostgreSQL, waits for the database to report healthy, then starts the API. Confirm both containers came up correctly:
+
+```bash
+docker compose ps
+```
+
+Both `api` and `db` should show `(healthy)`, not just `Up`.
+
+**Option B - Local development (Postgres in Docker, app running natively):**
+
+```bash
+docker compose up -d db          # Postgres only
+pip install -r api/requirements-dev.txt
+cd api
+uvicorn app.main:app --reload --port 8000
+```
+
+Run `uvicorn` from inside `api/`, not the repository root - the app imports itself as `app.*`, so `api/` needs to be the working directory.
+
+### 3. Verify it's running
+
+- `GET http://localhost:8000/health` - liveness check, no dependencies
+- `GET http://localhost:8000/health/ready` - confirms the database connection actually works
+- `http://localhost:8000/dashboard` - the operations dashboard
+
+---
+
 # Demo
 
 The animation below demonstrates the complete end-to-end workflow:

@@ -61,3 +61,11 @@ Monorepo
 
 Reason:
 A monorepo keeps the backend, frontend, documentation, diagrams, Docker configuration, and tests in one place. This simplifies development, deployment, and GitHub review for Version 1.
+
+## Decision #8
+
+Frontend Delivery:
+Server-rendered dashboard (Jinja2 + Bootstrap) instead of a separate React frontend.
+
+Reason:
+The original plan called for a separate React application talking to a REST API. That was scoped down during implementation: a server-rendered dashboard removes an entire second deployable, build pipeline, and API contract to design and maintain, without giving up any functionality this project actually needs. Revisit only if a future version needs a richer, more interactive UI than server-rendered templates can reasonably support.

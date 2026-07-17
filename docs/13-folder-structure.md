@@ -2,179 +2,67 @@
 
 ## Overview
 
-The AI IT Ticket Automation Platform uses a monorepo structure.
-
-The repository contains the backend application, frontend application, project documentation, Docker configuration, and automated tests.
-
-This structure keeps the project organized while simplifying development and deployment.
+The AI IT Ticket Automation Platform is a single FastAPI backend that also serves its own
+operations dashboard via server-rendered Jinja2 templates - there is no separate frontend
+application. This document reflects the structure as actually built. See
+[project-decisions.md](project-decisions.md), Decision #8, for why this diverged from the
+original planned React/backend split.
 
 ---
 
 # Repository Structure
 
 ```text
-ai-it-ticket-automation-platform/
-
-│
-├── backend/
-│
-├── frontend/
-│
-├── docs/
-│
-├── diagrams/
-│
-├── docker/
-│
-├── tests/
-│
-├── .env.example
-│
-├── .gitignore
-│
-├── docker-compose.yml
-│
-├── README.md
-│
-└── LICENSE
-```
-
----
-
-# Backend
-
-```text
-backend/
-
-├── app/
-│
-├── api/
-│
-├── core/
-│
-├── models/
-│
-├── schemas/
-│
-├── services/
-│
-├── integrations/
-│
-├── database/
-│
-├── middleware/
-│
-├── utils/
-│
-└── main.py
-```
-
----
-
-# Frontend
-
-```text
-frontend/
-
-├── src/
-├── public/
-├── components/
-├── pages/
-├── services/
-├── hooks/
-├── assets/
-└── package.json
-```
-
----
-
-# Documentation
-
-```text
-docs/
-
-01-business-problem.md
-
-02-functional-requirements.md
-
-03-non-functional-requirements.md
-
-04-mvp-definition.md
-
-05-user-flow.md
-
-06-system-architecture.md
-
-07-database-design.md
-
-08-api-design.md
-
-09-authentication-strategy.md
-
-10-error-handling-strategy.md
-
-11-logging-strategy.md
-
-12-security-review.md
-
-13-folder-structure.md
-```
-
----
-
-# Diagrams
-
-```text
-diagrams/
-
-user-flow-v1.png
-
-system-architecture.png
-
-database-erd.png
-
-deployment-diagram.png
-```
-
----
-
-# Docker
-
-```text
-docker/
-
-Dockerfile.backend
-
-Dockerfile.frontend
-```
-
----
-
-# Tests
-
-```text
-tests/
-
-backend/
-
-frontend/
+AI-IT-Ticket-Automation-Platform/
+├── .github/
+│   ├── workflows/ci.yml        # Lint, security (pip-audit), and test jobs on every push/PR
+│   └── dependabot.yml          # Weekly dependency update PRs, grouped by ecosystem
+├── api/                        # The FastAPI application (backend + dashboard)
+│   ├── app/
+│   │   ├── api/routes/         # HTTP route handlers, one file per resource
+│   │   ├── core/                # Config, logging, error handling, request middleware
+│   │   ├── db/                  # SQLAlchemy engine/session setup
+│   │   ├── models/               # SQLAlchemy ORM models
+│   │   ├── schemas/              # Pydantic request/response schemas
+│   │   ├── services/             # Business logic: rule engine, Jira, Slack, AI, workflow orchestration
+│   │   ├── templates/            # Jinja2 templates for the dashboard
+│   │   ├── static/                # Static assets served by the dashboard
+│   │   └── main.py                # FastAPI app instance and startup wiring
+│   ├── Dockerfile                 # Multi-stage build, non-root user, HEALTHCHECK
+│   ├── requirements.txt           # Production dependencies (exact pins)
+│   └── requirements-dev.txt       # + pytest, ruff, pre-commit
+├── tests/                         # pytest suite, run from the repository root
+├── docs/                          # Planning and architecture documentation (this file included)
+├── diagrams/                      # Architecture diagram used in the README
+├── screenshots/                   # Demo screenshots used in the README
+├── demo/                          # Demo GIF used in the README
+├── docker-compose.yml             # API + Postgres, with healthcheck-gated startup ordering
+├── .pre-commit-config.yaml        # Ruff, gitleaks, and file hygiene checks on every commit
+└── pyproject.toml                 # pytest and Ruff configuration
 ```
 
 ---
 
 # Design Principles
 
-The repository structure follows these principles:
-
-- Keep frontend and backend separated.
-- Keep documentation alongside the source code.
-- Keep diagrams in a dedicated directory.
-- Organize backend code by responsibility.
-- Keep deployment configuration isolated.
-- Support future project growth without restructuring.
+- **Single backend service.** The dashboard is server-rendered, not a separate frontend
+  app - see Decision #8 in `project-decisions.md`.
+- **Business logic lives in `services/`, not in route handlers.** Route files stay thin
+  and are easy to read; each service can be tested independently of HTTP.
+- **Tests live at the repository root (`tests/`), not nested under `api/`.** `pytest` and
+  CI both run from a single, predictable root regardless of what's being tested, and
+  `pyproject.toml`'s `pythonpath = ["api"]` lets tests import `app.*` the same way the app
+  imports itself.
+- **`core/` holds cross-cutting concerns** (config, logging, error handling, middleware)
+  separately from `services/` (business logic) and `api/routes/` (HTTP layer), so it's
+  clear where a given piece of code belongs.
 
 ---
 
 # Design Decision
 
-Version 1 uses a monorepo because it simplifies development, deployment, documentation, and onboarding while remaining appropriate for the project's size.
+The original plan called for a monorepo with a separate `backend/` and `frontend/` split
+(a React application talking to a REST API). That was scoped down during implementation in
+favor of a single FastAPI service that renders its own dashboard - see Decision #8 in
+`project-decisions.md` for the reasoning. This file previously described that original,
+never-built structure; it's been updated to describe what was actually shipped.
