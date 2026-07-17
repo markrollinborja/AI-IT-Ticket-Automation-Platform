@@ -105,3 +105,46 @@ def test_webhook_rejects_unsupported_event_type(client, mock_jira_and_slack):
     assert response.status_code == 400
     assert len(mock_jira_and_slack.jira_calls) == 0
     assert len(mock_jira_and_slack.slack_messages) == 0
+
+
+def test_webhook_returns_clean_500_when_jira_update_fails(
+    client_allowing_server_errors, db_session, mock_jira_and_slack, monkeypatch
+):
+    """
+    Simulates Jira being unreachable during the priority update step.
+    This exercises two things that had zero test coverage before this PR:
+
+    1. workflow_service.py's own failure handling - it should still mark
+       the workflow run "failed", record why, and send a Slack failure
+       notification, even though the request as a whole errors out.
+    2. The new global exception handler (app/core/error_handlers.py) -
+       the re-raised exception should become a clean 500 response with a
+       generic message, not a raw traceback leaked to the client.
+    """
+    from app.services.jira_service import jira_service
+
+    def failing_update_issue_priority(issue_key, priority):
+        raise ConnectionError("Jira is unreachable")
+
+    monkeypatch.setattr(jira_service, "update_issue_priority", failing_update_issue_priority)
+
+    payload = jira_webhook_payload(
+        key="IT-104",
+        summary="Forgot my password",
+        description="Need help resetting access to my account",
+        reporter="Jane Doe",
+    )
+
+    response = client_allowing_server_errors.post("/webhooks/jira", json=payload)
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error. Please try again or contact support."}
+
+    workflow_run = db_session.query(WorkflowRun).join(Ticket).filter(Ticket.jira_issue_key == "IT-104").one()
+    assert workflow_run.status == "failed"
+    assert workflow_run.error_type == "ConnectionError"
+
+    # workflow_service.py sends its own Slack "processing failed" message
+    # from inside the except block, before re-raising - that should still
+    # go out even though the request ultimately errors.
+    assert len(mock_jira_and_slack.slack_messages) == 1

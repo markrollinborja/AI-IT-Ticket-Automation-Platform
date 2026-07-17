@@ -1,10 +1,23 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     app_name: str = "AI IT Ticket Automation Platform API"
     app_version: str = "0.1.0"
-    environment: str = "development"
+
+    # Literal instead of a plain str: a typo like "producton" used to be
+    # silently accepted and just... be wrong, possibly for a while before
+    # anyone noticed. Now it fails at startup, with a clear pydantic
+    # validation error, instead of failing silently at some unknown point
+    # later.
+    environment: Literal["development", "staging", "production"] = "development"
+
+    # Configurable instead of hardcoded in core/logging.py, so log
+    # verbosity can differ between local dev (DEBUG) and a deployed
+    # environment (INFO/WARNING) without a code change.
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     database_url: str
 

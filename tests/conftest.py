@@ -152,6 +152,40 @@ def client(db_session):
 
 
 @pytest.fixture()
+def client_allowing_server_errors(db_session):
+    """
+    Same as `client`, except it won't re-raise unhandled exceptions into
+    the test.
+
+    TestClient defaults to raise_server_exceptions=True, which is the
+    right default almost everywhere: it surfaces an accidental bug as a
+    full traceback pointing at the real problem, instead of quietly
+    turning it into "test failed, expected 200 got 500" with no context.
+
+    But that default also means TestClient never lets you see the actual
+    Response your global exception handler (app/core/error_handlers.py)
+    produces for a real client - Starlette's error middleware sends that
+    response, then re-raises the original exception anyway, and
+    raise_server_exceptions=True propagates that re-raise straight into
+    the test. Use this fixture specifically when the test's whole point
+    is verifying that error-handling path, not for tests in general.
+    """
+    from app.db.session import get_db
+    from app.main import app
+    from fastapi.testclient import TestClient
+
+    def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
 def mock_jira_and_slack(monkeypatch):
     """
     Replace the real Jira and Slack HTTP calls with no-op fakes that just

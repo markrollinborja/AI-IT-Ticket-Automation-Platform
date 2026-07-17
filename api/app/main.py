@@ -6,7 +6,9 @@ from app.api.routes.tickets import router as tickets_router
 from app.api.routes.webhooks import router as webhooks_router
 from app.api.routes.workflow_runs import router as workflow_runs_router
 from app.core.config import settings
+from app.core.error_handlers import register_error_handlers
 from app.core.logging import configure_logging
+from app.core.middleware import register_request_logging
 from app.db.base import Base
 from app.db.session import engine
 
@@ -27,6 +29,9 @@ app = FastAPI(
     version=settings.app_version,
     description="Backend API for automating IT ticket triage, routing, and notifications.",
 )
+
+register_error_handlers(app)
+register_request_logging(app)
 
 app.include_router(health_router)
 app.include_router(tickets_router)
