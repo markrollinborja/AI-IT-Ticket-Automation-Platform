@@ -2,13 +2,13 @@
 # Install with: pip install -r api/requirements-dev.txt
 -r requirements.txt
 
-pytest==8.3.4
-pytest-cov==6.0.0
+pytest==9.1.1
+pytest-cov==7.1.0
 
 # Starlette's TestClient prefers httpx2 over plain httpx (httpx is going
 # stale upstream); without this it still works, just warns on every test
 # run. This is test-only - the app itself doesn't use httpx at all.
-httpx2==2.7.0
+httpx2==2.9.1
 
-ruff==0.15.22
-pre-commit==4.6.0
+ruff==0.16.0
+pre-commit==4.6.1
