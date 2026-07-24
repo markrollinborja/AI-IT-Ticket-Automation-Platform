@@ -24,7 +24,7 @@ repos:
   # Same Ruff version pinned in api/requirements-dev.txt, so local
   # pre-commit and CI apply identical rules.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.22
+    rev: v0.16.0
     hooks:
       - id: ruff
         args: ["--fix"]
@@ -35,6 +35,6 @@ repos:
   # Jira, Slack, and OpenAI, so a leaked credential here is a real risk,
   # not a theoretical one.
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.2
+    rev: v8.30.1
     hooks:
       - id: gitleaks
